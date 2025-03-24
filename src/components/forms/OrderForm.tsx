@@ -47,7 +47,7 @@ import { useAuth } from '@/contexts/AuthContext';
 const orderFormSchema = z.object({
   customerName: z.string().min(2, { message: 'Customer name is required' }),
   customerPhone: z.string().min(10, { message: 'Phone number is required' }),
-  customerEmail: z.string().email().optional().or(z.literal('')),
+  customerEmail: z.string().email({ message: 'Invalid email address' }).optional().or(z.literal('')),
   status: z.enum(['pending', 'dc', 'invoice', 'dispatched']),
   paymentCondition: z.enum(['immediate', 'days15', 'days30']),
   assignedTo: z.string().optional(),
@@ -205,13 +205,14 @@ export default function OrderForm({ onSuccess }: OrderFormProps) {
       const orderData = {
         customerName: values.customerName,
         customerPhone: values.customerPhone,
-        customerEmail: values.customerEmail || '',
+        customerEmail: values.customerEmail || 'customer@example.com', // Provide default email if empty
         status: values.status,
         paymentCondition: values.paymentCondition,
         assignedTo: values.assignedTo === 'all' ? null : values.assignedTo,
         notes: values.notes || '',
         items: sanitizedItems,
         total: calculateTotal(),
+        isPaid: false, // Explicitly set default values
         createdBy: user?._id || user?.id || '1', // Default to '1' if no user ID is available
       };
 
@@ -220,41 +221,60 @@ export default function OrderForm({ onSuccess }: OrderFormProps) {
         ? { ...orderData, dispatchDate } 
         : orderData;
       
+      console.log('Preparing to create order with data:', finalOrderData);
+      
       // Create form data
       const formData = new FormData();
       
-      // Add order data
+      // Add order data - ensure it's a string
       formData.append('orderData', JSON.stringify(finalOrderData));
       
       // Add image if exists
       if (orderImage) {
+        console.log('Adding image to order:', orderImage.name, orderImage.type, orderImage.size);
+        setUploadingImage(true);
         formData.append('orderImage', orderImage);
       }
       
-      // Create order
-      await createOrder(formData);
-      
-      // Update product stock
-      for (const item of orderItems) {
-        const product = products.find(p => (p._id === item.productId) || (p.id === item.productId));
-        if (product) {
-          const newStock = Math.max(0, product.stock - item.quantity);
-          await updateProduct(product._id || product.id || '', { stock: newStock });
+      try {
+        // Create order
+        const createdOrder = await createOrder(formData);
+        console.log('Order created successfully:', createdOrder);
+        
+        // Update product stock
+        for (const item of orderItems) {
+          try {
+            const product = products.find(p => (p._id === item.productId) || (p.id === item.productId));
+            if (product) {
+              const newStock = Math.max(0, product.stock - item.quantity);
+              await updateProduct(product._id || product.id || '', { stock: newStock });
+            }
+          } catch (stockError) {
+            console.error(`Error updating stock for product ${item.productId}:`, stockError);
+            // Continue with next product even if one fails
+          }
         }
+        
+        toast.success('Order created successfully');
+        
+        if (onSuccess) {
+          onSuccess();
+        } else {
+          navigate('/orders');
+        }
+      } catch (apiError: any) {
+        console.error('API error creating order:', apiError);
+        
+        // Show a more specific error message if available
+        const errorMessage = apiError.message || 'Failed to create order';
+        toast.error(errorMessage);
       }
-      
-      toast.success('Order created successfully');
-      
-      if (onSuccess) {
-        onSuccess();
-      } else {
-        navigate('/orders');
-      }
-    } catch (error) {
-      console.error('Error creating order:', error);
-      toast.error('Failed to create order');
+    } catch (error: any) {
+      console.error('Error in order submission process:', error);
+      toast.error(`Error creating order: ${error.message || 'Unknown error'}`);
     } finally {
       setIsLoading(false);
+      setUploadingImage(false);
     }
   };
 
@@ -428,6 +448,77 @@ export default function OrderForm({ onSuccess }: OrderFormProps) {
                     </FormItem>
                   )}
                 />
+                
+                <FormField
+                  control={form.control}
+                  name="notes"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Notes (Optional)</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Add any additional notes or details here"
+                          className="min-h-[100px]"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <div>
+                  <FormLabel>Order Image (Optional)</FormLabel>
+                  <div className="mt-2">
+                    <div className="flex items-center gap-4">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-9"
+                        onClick={() => document.getElementById('image-upload')?.click()}
+                      >
+                        <Upload className="mr-2 h-4 w-4" />
+                        Upload
+                      </Button>
+                      <Input
+                        id="image-upload"
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleImageChange}
+                      />
+                      <p className="text-sm text-muted-foreground">
+                        PNG, JPG or GIF, max 5MB
+                      </p>
+                    </div>
+                    
+                    {imagePreview && (
+                      <div className="mt-4">
+                        <p className="text-sm font-medium mb-2">Preview:</p>
+                        <div className="relative">
+                          <img
+                            src={imagePreview}
+                            alt="Order Preview"
+                            className="rounded-md max-h-[200px] object-contain"
+                          />
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="icon"
+                            className="absolute top-2 right-2 h-6 w-6"
+                            onClick={() => {
+                              setOrderImage(null);
+                              setImagePreview(null);
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
             

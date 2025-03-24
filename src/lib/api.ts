@@ -1,6 +1,6 @@
 import { Order, OrderStatus, Product, User } from './types';
 
-const API_URL = import.meta.env.VITE_API_URL || 'https://backend-sarathi.onrender.com/api';
+const API_URL = 'https://backend-sarathi.onrender.com/api';
 
 // Auth functions
 export const loginStaff = async (email: string, password: string) => {
@@ -259,21 +259,46 @@ export const fetchOrdersByAssignedTo = async (staffId: string) => {
 export const createOrder = async (formData: FormData) => {
   const token = localStorage.getItem('token');
   
-  const response = await fetch(`${API_URL}/orders`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      // Don't set Content-Type here, let the browser set it with the boundary for FormData
-    },
-    body: formData,
-  });
+  try {
+    console.log('Creating order with API_URL:', API_URL);
+    console.log('Authorization token exists:', !!token);
+    
+    // Log formData contents (can't directly console.log FormData)
+    console.log('FormData contains the following keys:');
+    for (const key of formData.keys()) {
+      console.log('- FormData key:', key);
+      // Don't log the actual file content for orderImage
+      if (key !== 'orderImage') {
+        console.log('  Value:', formData.get(key));
+      } else {
+        const file = formData.get(key) as File;
+        console.log('  File name:', file.name, 'Size:', file.size, 'Type:', file.type);
+      }
+    }
+    
+    const response = await fetch(`${API_URL}/orders`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        // Don't set Content-Type here, let the browser set it with the boundary for FormData
+      },
+      body: formData,
+    });
 
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || 'Failed to create order');
+    console.log('Response status:', response.status);
+    
+    const responseData = await response.json();
+    console.log('Response data:', responseData);
+    
+    if (!response.ok) {
+      throw new Error(responseData.message || responseData.error || 'Failed to create order');
+    }
+
+    return responseData;
+  } catch (error) {
+    console.error('Order creation error details:', error);
+    throw error;
   }
-
-  return response.json();
 };
 
 export const updateOrder = async (id: string, orderData: Partial<Order>) => {
