@@ -40,8 +40,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 
 import { OrderStatus, PaymentCondition, Product, OrderItem, User } from '@/lib/types';
-import { getProducts, updateProduct } from '@/lib/data';
-import { createOrder, fetchStaff } from '@/lib/api';
+import { createOrder, fetchStaff, fetchProducts, updateProduct } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 
 // Order form schema
@@ -72,9 +71,28 @@ export default function OrderForm({ onSuccess }: OrderFormProps) {
   const [selectedProduct, setSelectedProduct] = useState<string>('');
   const [quantity, setQuantity] = useState<number>(1);
   const [staffMembers, setStaffMembers] = useState<User[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [productsLoading, setProductsLoading] = useState(true);
   
-  const products = getProducts();
-  const availableProducts = products.filter(product => product.stock > 0);
+  // Fetch products from API
+  useEffect(() => {
+    const loadProducts = async () => {
+      setProductsLoading(true);
+      try {
+        const fetchedProducts = await fetchProducts();
+        setProducts(fetchedProducts);
+      } catch (error) {
+        console.error("Error loading products:", error);
+        toast.error("Failed to load products");
+      } finally {
+        setProductsLoading(false);
+      }
+    };
+    
+    loadProducts();
+  }, []);
+  
+  const availableProducts = (products || []).filter(product => product.stock > 0);
   
   // Fetch staff members when component mounts
   useEffect(() => {
@@ -124,7 +142,7 @@ export default function OrderForm({ onSuccess }: OrderFormProps) {
   const handleAddItem = () => {
     if (!selectedProduct || quantity <= 0) return;
     
-    const product = products.find(p => p.id === selectedProduct);
+    const product = products.find(p => p._id === selectedProduct || p.id === selectedProduct);
     if (!product) return;
     
     // Check if we already have this product in our items
@@ -138,7 +156,8 @@ export default function OrderForm({ onSuccess }: OrderFormProps) {
     } else {
       // Add new item
       const newItem: OrderItem = {
-        productId: product.id,
+        id: Math.random().toString(36).substring(2, 9),
+        productId: product._id || product.id || '',
         productName: product.name,
         quantity: quantity,
         price: product.price,
@@ -193,7 +212,7 @@ export default function OrderForm({ onSuccess }: OrderFormProps) {
         notes: values.notes || '',
         items: sanitizedItems,
         total: calculateTotal(),
-        createdBy: user?.id || '1', // Default to '1' if no user ID is available
+        createdBy: user?._id || user?.id || '1', // Default to '1' if no user ID is available
       };
 
       // Create a new object with the dispatchDate if needed
@@ -217,10 +236,10 @@ export default function OrderForm({ onSuccess }: OrderFormProps) {
       
       // Update product stock
       for (const item of orderItems) {
-        const product = products.find(p => p.id === item.productId);
+        const product = products.find(p => (p._id === item.productId) || (p.id === item.productId));
         if (product) {
           const newStock = Math.max(0, product.stock - item.quantity);
-          await updateProduct(product.id, { stock: newStock });
+          await updateProduct(product._id || product.id || '', { stock: newStock });
         }
       }
       
@@ -428,15 +447,22 @@ export default function OrderForm({ onSuccess }: OrderFormProps) {
                           <SelectValue placeholder="Select product" />
                         </SelectTrigger>
                         <SelectContent>
-                          {availableProducts.map((product) => (
-                            <SelectItem 
-                              key={product.id}
-                              value={product.id}
-                              disabled={product.stock <= 0}
-                            >
-                              {product.name} - ${product.price.toFixed(2)} - Stock: {product.stock}
-                            </SelectItem>
-                          ))}
+                          {productsLoading ? (
+                            <div className="flex items-center justify-center py-2">
+                              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                              <span>Loading products...</span>
+                            </div>
+                          ) : (
+                            availableProducts.map((product) => (
+                              <SelectItem 
+                                key={product._id || product.id}
+                                value={product._id || product.id}
+                                disabled={product.stock <= 0}
+                              >
+                                {product.name} - ${product.price.toFixed(2)} - Stock: {product.stock}
+                              </SelectItem>
+                            ))
+                          )}
                         </SelectContent>
                       </Select>
                     </div>
