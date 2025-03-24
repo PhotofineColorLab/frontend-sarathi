@@ -9,6 +9,14 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Order } from '@/lib/types';
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface DeleteOrderDialogProps {
   isOpen: boolean;
@@ -23,20 +31,23 @@ export function DeleteOrderDialog({
   order,
   onDelete,
 }: DeleteOrderDialogProps) {
+  const getOrderId = (order: Order) => order._id || order.id || '';
+  const getDisplayOrderId = (order: Order) => {
+    return order.orderNumber || `#${(order._id || order.id || '').substring(0, 8)}`;
+  };
+
   if (!order) return null;
 
-  const getOrderId = (order: Order) => order._id || order.id || '';
-
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Delete Order</DialogTitle>
-          <DialogDescription>
-            Are you sure you want to delete order #{getOrderId(order).substring(0, 8)}? This action cannot be undone.
-          </DialogDescription>
-        </DialogHeader>
-        <DialogFooter>
+    <AlertDialog open={isOpen} onOpenChange={onOpenChange}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Are you sure you want to delete order {getDisplayOrderId(order)}? This action cannot be undone.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
@@ -49,8 +60,8 @@ export function DeleteOrderDialog({
           >
             Delete
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }

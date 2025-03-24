@@ -199,6 +199,8 @@ export const fetchOrders = async (status?: string) => {
     ? `${API_URL}/orders/status/${status}`
     : `${API_URL}/orders`;
     
+  console.log('Fetching orders from URL:', url);
+  
   const response = await fetch(url, {
     headers: {
       'Authorization': `Bearer ${token}`,
@@ -209,7 +211,9 @@ export const fetchOrders = async (status?: string) => {
     throw new Error('Failed to fetch orders');
   }
 
-  return response.json();
+  const data = await response.json();
+  console.log('Orders received from server:', data);
+  return data;
 };
 
 export const fetchOrdersByDateRange = async (startDate: Date, endDate: Date) => {

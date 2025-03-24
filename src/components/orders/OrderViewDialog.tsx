@@ -68,6 +68,15 @@ export function OrderViewDialog({
   if (!order) return null;
 
   const getOrderId = (order: Order) => order._id || '';
+  const getDisplayOrderId = (order: Order) => {
+    if (order.orderNumber) {
+      console.log('OrderView - Using orderNumber:', order.orderNumber);
+      return order.orderNumber;
+    } else {
+      console.log('OrderView - No orderNumber found, using ID:', order._id);
+      return `#${(order._id || '').substring(0, 8)}`;
+    }
+  };
 
   const getPaymentConditionText = (condition?: string) => {
     switch (condition) {
@@ -122,7 +131,7 @@ export function OrderViewDialog({
           <div className="grid grid-cols-2 gap-4">
             <div>
               <p className="text-sm font-medium">Order ID</p>
-              <p className="text-sm text-muted-foreground">#{getOrderId(order).substring(0, 8)}</p>
+              <p className="text-sm text-muted-foreground">{getDisplayOrderId(order)}</p>
             </div>
             <div>
               <p className="text-sm font-medium">Date</p>

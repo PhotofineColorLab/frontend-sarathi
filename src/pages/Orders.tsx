@@ -182,7 +182,8 @@ export default function Orders() {
     const matchesSearch = searchTerm === '' 
       ? true 
       : order.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (order._id && order._id.toLowerCase().includes(searchTerm.toLowerCase()));
+        (order._id && order._id.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (order.orderNumber && order.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()));
     
     // Then filter by date range - checking only createdAt
     const matchesDateRange = dateRange.from 
@@ -310,6 +311,7 @@ export default function Orders() {
         onOpenChange={setIsMarkPaidDialogOpen}
         order={selectedOrder}
         onMarkPaid={handleMarkPaid}
+        formatCurrency={formatCurrency}
       />
     </DashboardLayout>
   );

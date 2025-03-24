@@ -15,6 +15,7 @@ interface MarkPaidDialogProps {
   onOpenChange: (open: boolean) => void;
   order: Order | null;
   onMarkPaid: (orderId: string) => void;
+  formatCurrency: (amount: number) => string;
 }
 
 export function MarkPaidDialog({
@@ -22,14 +23,18 @@ export function MarkPaidDialog({
   onOpenChange,
   order,
   onMarkPaid,
+  formatCurrency,
 }: MarkPaidDialogProps) {
-  if (!order) return null;
-
   const getOrderId = (order: Order) => order._id || order.id || '';
+  const getDisplayOrderId = (order: Order) => {
+    return order.orderNumber || `#${(order._id || order.id || '').substring(0, 8)}`;
+  };
+
+  if (!order) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Mark Order as Paid</DialogTitle>
           <DialogDescription>
@@ -37,13 +42,15 @@ export function MarkPaidDialog({
           </DialogDescription>
         </DialogHeader>
         
-        <div className="py-4">
-          <p>
-            <span className="font-medium">Order ID:</span> #{getOrderId(order).substring(0, 8)}
-          </p>
-          <p>
-            <span className="font-medium">Customer:</span> {order.customerName}
-          </p>
+        <div className="space-y-4">
+          <div className="bg-muted p-4 rounded-md space-y-2">
+            <div className="flex justify-between">
+              <span className="font-medium">Order ID:</span> {getDisplayOrderId(order)}
+            </div>
+            <div className="flex justify-between">
+              <span className="font-medium">Customer:</span> {order.customerName}
+            </div>
+          </div>
         </div>
 
         <DialogFooter>
