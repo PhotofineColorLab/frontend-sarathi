@@ -205,15 +205,15 @@ export default function OrderForm({ onSuccess }: OrderFormProps) {
       const orderData = {
         customerName: values.customerName,
         customerPhone: values.customerPhone,
-        customerEmail: values.customerEmail || 'customer@example.com', // Provide default email if empty
+        customerEmail: values.customerEmail || undefined, // Make email optional
         status: values.status,
         paymentCondition: values.paymentCondition,
         assignedTo: values.assignedTo === 'all' ? null : values.assignedTo,
         notes: values.notes || '',
         items: sanitizedItems,
         total: calculateTotal(),
-        isPaid: false, // Explicitly set default values
-        createdBy: user?._id || user?.id || '1', // Default to '1' if no user ID is available
+        isPaid: false,
+        createdBy: user?._id || user?.id || '1',
       };
 
       // Create a new object with the dispatchDate if needed
