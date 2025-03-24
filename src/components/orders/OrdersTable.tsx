@@ -63,7 +63,15 @@ export function OrdersTable({
           {orders.map((order) => (
             <TableRow key={getOrderId(order)} className="transition-all hover:bg-muted/50">
               <TableCell className="font-medium">#{getOrderId(order).substring(0, 8)}</TableCell>
-              <TableCell>{order.customerName}</TableCell>
+              <TableCell>
+                <button 
+                  onClick={() => onViewOrder(order)}
+                  className="text-left hover:text-primary hover:underline transition-colors cursor-pointer flex items-center gap-1 w-full"
+                  title="Click to view order details"
+                >
+                  {order.customerName}
+                </button>
+              </TableCell>
               <TableCell>
                 {format(new Date(order.createdAt), 'MMM dd, yyyy')}
               </TableCell>
