@@ -17,17 +17,17 @@ export default function Settings() {
   
   const handleSaveProfile = (e: React.FormEvent) => {
     e.preventDefault();
-    toast.success('Profile settings saved successfully');
+    // Remove unnecessary toast
   };
   
   const handleSaveNotifications = (e: React.FormEvent) => {
     e.preventDefault();
-    toast.success('Notification settings saved successfully');
+    // Remove unnecessary toast
   };
   
   const handleSaveAppearance = (e: React.FormEvent) => {
     e.preventDefault();
-    toast.success('Appearance settings saved successfully');
+    // Remove unnecessary toast
   };
 
   return (

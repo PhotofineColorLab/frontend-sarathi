@@ -86,7 +86,6 @@ export default function Orders() {
       }
       
       setOrders(fetchedOrders);
-      toast.success("Orders loaded successfully");
     } catch (error) {
       console.error("Error loading orders:", error);
       toast.error("Failed to load orders");
