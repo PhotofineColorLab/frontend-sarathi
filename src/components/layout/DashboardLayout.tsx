@@ -17,7 +17,8 @@ import { Button } from '@/components/ui/button';
 import { 
   Sheet, 
   SheetContent, 
-  SheetTrigger 
+  SheetTrigger,
+  SheetClose 
 } from '@/components/ui/sheet';
 import { useAuth } from '@/contexts/AuthContext';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -248,9 +249,11 @@ const DashboardLayout = React.memo(({ children }: { children: React.ReactNode })
               </div>
             )}
             {isMobile ? (
-              <Button variant="ghost" size="icon" onClick={closeSidebar}>
-                <X className="h-5 w-5" />
-              </Button>
+              <SheetClose asChild>
+                <Button variant="ghost" size="icon">
+                  <X className="h-5 w-5" />
+                </Button>
+              </SheetClose>
             ) : (
               <Button 
                 variant="ghost" 

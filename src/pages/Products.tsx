@@ -522,10 +522,17 @@ export default function Products() {
 
       {/* Product form dialog */}
       <Dialog open={isProductFormOpen} onOpenChange={setIsProductFormOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className={cn(
+          "max-w-2xl",
+          isMobile && "w-[95vw] p-4 max-h-[90vh] overflow-y-auto"
+        )}>
           <DialogHeader>
-            <DialogTitle>{isEditing ? 'Edit Product' : 'Add New Product'}</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className={cn(
+              isMobile ? "text-lg" : "text-xl"
+            )}>{isEditing ? 'Edit Product' : 'Add New Product'}</DialogTitle>
+            <DialogDescription className={cn(
+              isMobile && "text-xs"
+            )}>
               {isEditing 
                 ? "Update the product details below." 
                 : "Fill out the form below to add a new product to your inventory."}
@@ -533,30 +540,34 @@ export default function Products() {
           </DialogHeader>
           
           <form onSubmit={handleSubmitProduct} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className={cn(
+              "grid gap-4",
+              isMobile ? "grid-cols-1" : "grid-cols-1 md:grid-cols-2"
+            )}>
               <div className="space-y-2">
-                <Label htmlFor="name">Product Name</Label>
+                <Label htmlFor="name" className={cn(isMobile && "text-sm")}>Product Name</Label>
                 <Input
                   id="name"
                   value={productName}
                   onChange={(e) => setProductName(e.target.value)}
                   placeholder="Enter product name"
                   required
+                  className={cn(isMobile && "h-9 text-sm")}
                 />
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="category">Category</Label>
+                <Label htmlFor="category" className={cn(isMobile && "text-sm")}>Category</Label>
                 <Select
                   value={productCategory}
                   onValueChange={(value) => setProductCategory(value as ProductCategory)}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className={cn(isMobile && "h-9 text-sm")}>
                     <SelectValue placeholder="Select a category" />
                   </SelectTrigger>
                   <SelectContent>
                     {productCategories.map((category) => (
-                      <SelectItem key={category.value} value={category.value}>
+                      <SelectItem key={category.value} value={category.value} className={cn(isMobile && "text-sm")}>
                         {category.label}
                       </SelectItem>
                     ))}
@@ -566,19 +577,23 @@ export default function Products() {
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
+              <Label htmlFor="description" className={cn(isMobile && "text-sm")}>Description</Label>
               <Textarea
                 id="description"
                 value={productDescription}
                 onChange={(e) => setProductDescription(e.target.value)}
                 placeholder="Enter product description"
                 required
+                className={cn(isMobile && "text-sm")}
               />
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className={cn(
+              "grid gap-4",
+              isMobile ? "grid-cols-1" : "grid-cols-1 md:grid-cols-2"
+            )}>
               <div className="space-y-2">
-                <Label htmlFor="price">Price</Label>
+                <Label htmlFor="price" className={cn(isMobile && "text-sm")}>Price</Label>
                 <Input
                   id="price"
                   type="number"
@@ -588,11 +603,12 @@ export default function Products() {
                   onChange={(e) => setProductPrice(e.target.value)}
                   placeholder="0.00"
                   required
+                  className={cn(isMobile && "h-9 text-sm")}
                 />
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="stock">Stock</Label>
+                <Label htmlFor="stock" className={cn(isMobile && "text-sm")}>Stock</Label>
                 <Input
                   id="stock"
                   type="number"
@@ -602,17 +618,19 @@ export default function Products() {
                   onChange={(e) => setProductStock(e.target.value)}
                   placeholder="0"
                   required
+                  className={cn(isMobile && "h-9 text-sm")}
                 />
               </div>
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="image">Image URL</Label>
+              <Label htmlFor="image" className={cn(isMobile && "text-sm")}>Image URL</Label>
               <Input
                 id="image"
                 value={productImage}
                 onChange={(e) => setProductImage(e.target.value)}
                 placeholder="https://example.com/image.jpg"
+                className={cn(isMobile && "h-9 text-sm")}
               />
               
               {productImage && (
@@ -629,15 +647,23 @@ export default function Products() {
               )}
             </div>
 
-            <DialogFooter>
+            <DialogFooter className={cn(
+              "gap-2 mt-6",
+              isMobile && "flex-col"
+            )}>
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => setIsProductFormOpen(false)}
+                className={cn(isMobile && "w-full h-9")}
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={isSubmitting}>
+              <Button 
+                type="submit" 
+                disabled={isSubmitting} 
+                className={cn(isMobile && "w-full h-9")}
+              >
                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {isEditing ? 'Update Product' : 'Add Product'}
               </Button>
@@ -648,22 +674,28 @@ export default function Products() {
 
       {/* Delete confirmation dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent>
+        <DialogContent className={cn(
+          isMobile && "w-[95vw] p-4"
+        )}>
           <DialogHeader>
-            <DialogTitle>Delete Product</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className={cn(isMobile && "text-lg")}>Delete Product</DialogTitle>
+            <DialogDescription className={cn(isMobile && "text-xs")}>
               Are you sure you want to delete this product?
               This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <div className="p-4 border rounded-md">
-            <h4 className="font-semibold">{selectedProduct?.name}</h4>
-            <p className="text-sm text-muted-foreground mt-1">{selectedProduct?.description}</p>
+            <h4 className={cn("font-semibold", isMobile && "text-sm")}>{selectedProduct?.name}</h4>
+            <p className={cn("text-sm text-muted-foreground mt-1", isMobile && "text-xs")}>{selectedProduct?.description}</p>
           </div>
-          <DialogFooter>
+          <DialogFooter className={cn(
+            "gap-2",
+            isMobile && "flex-col"
+          )}>
             <Button
               variant="outline"
               onClick={() => setIsDeleteDialogOpen(false)}
+              className={cn(isMobile && "w-full h-9")}
             >
               Cancel
             </Button>
@@ -671,6 +703,7 @@ export default function Products() {
               variant="destructive"
               onClick={() => selectedProduct && handleDeleteProduct(getProductId(selectedProduct))}
               disabled={isDeleting}
+              className={cn(isMobile && "w-full h-9")}
             >
               {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Delete
@@ -681,15 +714,23 @@ export default function Products() {
 
       {/* Product view dialog */}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className={cn(
+          "max-w-2xl",
+          isMobile && "w-[95vw] p-4"
+        )}>
           <DialogHeader>
-            <DialogTitle>Product Details</DialogTitle>
+            <DialogTitle className={cn(isMobile && "text-lg")}>Product Details</DialogTitle>
           </DialogHeader>
           
           {selectedProduct && (
             <div className="space-y-4">
-              <div className="flex flex-col md:flex-row gap-6">
-                <div className="w-full md:w-1/3">
+              <div className={cn(
+                "flex gap-6",
+                isMobile ? "flex-col" : "flex-row md:flex-row"
+              )}>
+                <div className={cn(
+                  isMobile ? "w-full" : "w-full md:w-1/3"
+                )}>
                   {selectedProduct.image ? (
                     <div className="aspect-square rounded-lg overflow-hidden bg-muted">
                       <img 
@@ -707,7 +748,7 @@ export default function Products() {
                 
                 <div className="flex-1 space-y-4">
                   <div>
-                    <h2 className="text-2xl font-bold">{selectedProduct.name}</h2>
+                    <h2 className={cn("font-bold", isMobile ? "text-lg" : "text-2xl")}>{selectedProduct.name}</h2>
                     <div className="flex items-center gap-2 mt-1">
                       <Badge className="capitalize">{selectedProduct.category}</Badge>
                       <Badge variant={selectedProduct.stock > 10 ? "default" : "destructive"}>
@@ -717,25 +758,29 @@ export default function Products() {
                   </div>
                   
                   <div>
-                    <p className="text-3xl font-bold">₹{selectedProduct.price.toLocaleString()}</p>
+                    <p className={cn("font-bold", isMobile ? "text-xl" : "text-3xl")}>₹{selectedProduct.price.toLocaleString()}</p>
                   </div>
                   
                   {selectedProduct.description && (
                     <div>
-                      <h3 className="text-sm text-muted-foreground mb-1">Description</h3>
-                      <p className="text-sm">{selectedProduct.description}</p>
+                      <h3 className={cn("text-muted-foreground mb-1", isMobile ? "text-xs" : "text-sm")}>Description</h3>
+                      <p className={isMobile ? "text-xs" : "text-sm"}>{selectedProduct.description}</p>
                     </div>
                   )}
                 </div>
               </div>
               
-              <DialogFooter className="gap-2 sm:gap-0">
+              <DialogFooter className={cn(
+                "gap-2 sm:gap-0",
+                isMobile && "flex-col"
+              )}>
                 <Button 
                   variant="outline" 
                   onClick={() => {
                     setIsViewDialogOpen(false);
                     handleEditProduct(selectedProduct);
                   }}
+                  className={cn(isMobile && "w-full h-9")}
                 >
                   <Edit className="h-4 w-4 mr-2" />
                   Edit Product
@@ -747,6 +792,7 @@ export default function Products() {
                     setSelectedProduct(selectedProduct);
                     setIsDeleteDialogOpen(true);
                   }}
+                  className={cn(isMobile && "w-full h-9")}
                 >
                   <Trash className="h-4 w-4 mr-2" />
                   Delete Product

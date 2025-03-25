@@ -290,6 +290,27 @@ export default function OrderForm({ onSuccess }: OrderFormProps) {
     }
   };
 
+  // Handle navigation back to orders page
+  const handleCancel = () => {
+    try {
+      // First attempt with React Router navigation
+      navigate('/orders');
+      
+      // Set a timeout to check if we're still on the same page
+      setTimeout(() => {
+        // If still showing order form, force redirect using window.location
+        if (window.location.pathname.includes('/orders')) {
+          console.log('Using fallback navigation method');
+          window.location.href = '/orders';
+        }
+      }, 100);
+    } catch (error) {
+      console.error('Navigation error:', error);
+      // Fallback to direct location change
+      window.location.href = '/orders';
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -299,7 +320,7 @@ export default function OrderForm({ onSuccess }: OrderFormProps) {
         </div>
         <Button
           variant="outline"
-          onClick={() => navigate('/orders')}
+          onClick={handleCancel}
         >
           Cancel
         </Button>
@@ -667,14 +688,7 @@ export default function OrderForm({ onSuccess }: OrderFormProps) {
             </div>
           </div>
           
-          <div className="flex justify-end gap-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => navigate('/orders')}
-            >
-              Cancel
-            </Button>
+          <div className="flex justify-end">
             <Button
               type="submit"
               disabled={isLoading || uploadingImage}

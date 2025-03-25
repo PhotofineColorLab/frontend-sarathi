@@ -11,12 +11,15 @@ import { Button } from '@/components/ui/button';
 import { Order } from '@/lib/types';
 import {
   AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { Loader2 } from "lucide-react";
 
 interface DeleteOrderDialogProps {
   isOpen: boolean;
@@ -31,35 +34,42 @@ export function DeleteOrderDialog({
   order,
   onDelete,
 }: DeleteOrderDialogProps) {
-  const getOrderId = (order: Order) => order._id || order.id || '';
-  const getDisplayOrderId = (order: Order) => {
-    return order.orderNumber || `#${(order._id || order.id || '').substring(0, 8)}`;
-  };
+  const [isLoading, setIsLoading] = React.useState(false);
 
-  if (!order) return null;
+  const handleDelete = async () => {
+    if (!order) return;
+    
+    setIsLoading(true);
+    try {
+      await onDelete(order.id || order._id || '');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <AlertDialog open={isOpen} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+          <AlertDialogTitle>Delete Order</AlertDialogTitle>
           <AlertDialogDescription>
-            Are you sure you want to delete order {getDisplayOrderId(order)}? This action cannot be undone.
+            Are you sure you want to delete this order? This action cannot be undone.
           </AlertDialogDescription>
         </AlertDialogHeader>
+        <div className="space-y-2 py-2">
+          <p><strong>Order ID:</strong> {order?.orderNumber || (order?.id && order.id.substring(0, 8))}</p>
+          <p><strong>Customer:</strong> {order?.customerName}</p>
+        </div>
         <AlertDialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button
-            variant="destructive"
-            onClick={() => {
-              onDelete(getOrderId(order));
-              onOpenChange(false);
-            }}
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction 
+            onClick={handleDelete}
+            disabled={isLoading}
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >
+            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Delete
-          </Button>
+          </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

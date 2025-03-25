@@ -8,6 +8,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Loader2 } from 'lucide-react';
 import { Order } from '@/lib/types';
 
 interface MarkPaidDialogProps {
@@ -15,7 +16,7 @@ interface MarkPaidDialogProps {
   onOpenChange: (open: boolean) => void;
   order: Order | null;
   onMarkPaid: (orderId: string) => void;
-  formatCurrency: (amount: number) => string;
+  formatCurrency: (value: number) => string;
 }
 
 export function MarkPaidDialog({
@@ -25,9 +26,18 @@ export function MarkPaidDialog({
   onMarkPaid,
   formatCurrency,
 }: MarkPaidDialogProps) {
-  const getOrderId = (order: Order) => order._id || order.id || '';
-  const getDisplayOrderId = (order: Order) => {
-    return order.orderNumber || `#${(order._id || order.id || '').substring(0, 8)}`;
+  const [isLoading, setIsLoading] = React.useState(false);
+
+  const handleMarkPaid = async () => {
+    if (!order) return;
+    
+    setIsLoading(true);
+    try {
+      await onMarkPaid(order.id || order._id || '');
+      onOpenChange(false);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   if (!order) return null;
@@ -45,10 +55,13 @@ export function MarkPaidDialog({
         <div className="space-y-4">
           <div className="bg-muted p-4 rounded-md space-y-2">
             <div className="flex justify-between">
-              <span className="font-medium">Order ID:</span> {getDisplayOrderId(order)}
+              <span className="font-medium">Order ID:</span> {order.orderNumber || order.id?.substring(0, 8)}
             </div>
             <div className="flex justify-between">
               <span className="font-medium">Customer:</span> {order.customerName}
+            </div>
+            <div className="flex justify-between">
+              <span className="font-medium">Amount:</span> {formatCurrency(order.total)}
             </div>
           </div>
         </div>
@@ -58,11 +71,11 @@ export function MarkPaidDialog({
             Cancel
           </Button>
           <Button 
-            onClick={() => {
-              onMarkPaid(getOrderId(order));
-              onOpenChange(false);
-            }}
+            onClick={handleMarkPaid}
+            disabled={isLoading}
+            className="gap-1"
           >
+            {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
             Mark as Paid
           </Button>
         </DialogFooter>
