@@ -12,6 +12,9 @@ import {
   Users,
   Eye,
   EyeOff,
+  Calendar,
+  CheckCircle,
+  XCircle,
 } from 'lucide-react';
 import {
   Card,
@@ -59,7 +62,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { User as UserType, UserRole } from '@/lib/types';
 import { useAuth } from '@/contexts/AuthContext';
-import { fetchStaff, createStaff, updateStaff, deleteStaff } from '@/lib/api';
+import { fetchStaff, createStaff, updateStaff, deleteStaff, recordAttendance, getStaffAttendance, getAllStaffAttendanceByDate } from '@/lib/api';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export default function Staff() {
   const { user: currentUser } = useAuth();
@@ -78,6 +82,20 @@ export default function Staff() {
   const [staffPhone, setStaffPhone] = useState('');
   const [staffPassword, setStaffPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  
+  // Attendance state
+  const [activeTab, setActiveTab] = useState('members');
+  const [attendanceDate, setAttendanceDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [staffAttendance, setStaffAttendance] = useState<{
+    staffId: string;
+    name: string;
+    isPresent: boolean | null;
+    remarks: string;
+  }[]>([]);
+  const [isAttendanceLoading, setIsAttendanceLoading] = useState(false);
+  const [selectedAttendanceStaff, setSelectedAttendanceStaff] = useState<string | null>(null);
+  const [attendanceRemarks, setAttendanceRemarks] = useState('');
+  const [isShowingAttendanceDialog, setIsShowingAttendanceDialog] = useState(false);
   
   // Fetch staff data on component mount
   useEffect(() => {
@@ -188,6 +206,127 @@ export default function Staff() {
     s.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Fetch staff attendance data for the selected date
+  const loadAttendanceData = async () => {
+    try {
+      setIsAttendanceLoading(true);
+      const attendanceData = await getAllStaffAttendanceByDate(attendanceDate);
+      console.log('Loaded attendance data:', attendanceData);
+      
+      // Check if we received the expected data structure
+      if (!attendanceData || !attendanceData.staffAttendance) {
+        console.error('Unexpected attendance data format:', attendanceData);
+        toast.error('Received unexpected data format from the server');
+        setIsAttendanceLoading(false);
+        return;
+      }
+      
+      // Map attendance data to staff members
+      const mappedAttendance = attendanceData.staffAttendance.map((record: any) => {
+        return {
+          staffId: record.staffId,
+          name: record.name,
+          isPresent: record.attendance?.isPresent ?? null,
+          remarks: record.attendance?.remarks || '',
+        };
+      });
+      
+      console.log('Mapped attendance data:', mappedAttendance);
+      setStaffAttendance(mappedAttendance);
+    } catch (error) {
+      console.error('Failed to fetch attendance data:', error);
+      toast.error('Failed to load attendance records');
+    } finally {
+      setIsAttendanceLoading(false);
+    }
+  };
+  
+  // Load attendance data when date changes or staff list is updated
+  useEffect(() => {
+    if (activeTab === 'attendance' && staff.length > 0) {
+      loadAttendanceData();
+    }
+  }, [attendanceDate, staff, activeTab]);
+  
+  // Handle marking attendance
+  const handleMarkAttendance = async (staffId: string, isPresent: boolean) => {
+    try {
+      console.log(`Marking ${isPresent ? 'present' : 'absent'} for staff ID ${staffId} on ${attendanceDate}`);
+      
+      // Find the current staff member in the attendance state
+      const currentStaffAttendance = staffAttendance.find(a => a.staffId === staffId);
+      
+      // If attendance is already marked and same status, don't update
+      if (currentStaffAttendance && currentStaffAttendance.isPresent === isPresent) {
+        return;
+      }
+      
+      const attendanceData = {
+        date: attendanceDate,
+        isPresent,
+        remarks: currentStaffAttendance?.remarks || '',
+      };
+      
+      // Update attendance on the server
+      await recordAttendance(staffId, attendanceData);
+      
+      // Update local state
+      setStaffAttendance(prevState =>
+        prevState.map(a =>
+          a.staffId === staffId ? { ...a, isPresent } : a
+        )
+      );
+      
+      toast.success(`Marked ${isPresent ? 'present' : 'absent'} successfully`);
+    } catch (error) {
+      console.error('Failed to mark attendance:', error);
+      toast.error('Failed to update attendance');
+    }
+  };
+  
+  // Handle opening the remarks dialog
+  const handleOpenRemarksDialog = (staffId: string) => {
+    const staff = staffAttendance.find(a => a.staffId === staffId);
+    setSelectedAttendanceStaff(staffId);
+    setAttendanceRemarks(staff?.remarks || '');
+    setIsShowingAttendanceDialog(true);
+  };
+  
+  // Handle saving attendance remarks
+  const handleSaveRemarks = async () => {
+    if (!selectedAttendanceStaff) return;
+    
+    try {
+      const staff = staffAttendance.find(a => a.staffId === selectedAttendanceStaff);
+      
+      if (!staff) {
+        throw new Error('Staff not found');
+      }
+      
+      const attendanceData = {
+        date: attendanceDate,
+        isPresent: staff.isPresent === null ? true : staff.isPresent, // Default to present if not marked
+        remarks: attendanceRemarks,
+      };
+      
+      // Update attendance on the server
+      await recordAttendance(selectedAttendanceStaff, attendanceData);
+      
+      // Update local state
+      setStaffAttendance(prevState =>
+        prevState.map(a =>
+          a.staffId === selectedAttendanceStaff ? { ...a, remarks: attendanceRemarks } : a
+        )
+      );
+      
+      setIsShowingAttendanceDialog(false);
+      toast.success('Remarks saved successfully');
+    } catch (error) {
+      console.error('Failed to save remarks:', error);
+      toast.error('Failed to update remarks');
+    }
+  };
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -197,129 +336,252 @@ export default function Staff() {
             Manage your staff members and their access permissions
           </p>
         </div>
-
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div className="relative max-w-sm">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search staff..."
-              className="pl-8 md:w-[300px] lg:w-[400px]"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
+        
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="members">Staff Members</TabsTrigger>
+            <TabsTrigger value="attendance">Attendance</TabsTrigger>
+          </TabsList>
           
-          <Button onClick={() => handleOpenStaffForm()}>
-            <UserPlus className="h-4 w-4 mr-2" />
-            Add Staff Member
-          </Button>
-        </div>
+          <TabsContent value="members" className="space-y-4">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <div className="relative max-w-sm">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="search"
+                  placeholder="Search staff..."
+                  className="pl-8 md:w-[300px] lg:w-[400px]"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+              
+              <Button onClick={() => handleOpenStaffForm()}>
+                <UserPlus className="h-4 w-4 mr-2" />
+                Add Staff Member
+              </Button>
+            </div>
 
-        <Card className="border shadow-sm">
-          <CardHeader className="p-5">
-            <CardTitle>Staff Members</CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            {isLoading ? (
-              <div className="flex justify-center items-center p-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-              </div>
-            ) : filteredStaff.length === 0 ? (
-              <div className="flex flex-col items-center justify-center p-8 text-center">
-                <Users className="h-12 w-12 text-muted-foreground mb-4" />
-                <h3 className="text-lg font-semibold">No staff members found</h3>
-                <p className="text-sm text-muted-foreground mt-2">
-                  {searchTerm
-                    ? "Try adjusting your search query"
-                    : "Add your first staff member to get started"}
-                </p>
-              </div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Staff Member</TableHead>
-                    <TableHead>Role</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Phone</TableHead>
-                    <TableHead>Joined</TableHead>
-                    <TableHead className="w-[100px]">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredStaff.map((member) => (
-                    <TableRow key={member.id}>
-                      <TableCell className="font-medium">
-                        <div className="flex items-center gap-3">
-                          <Avatar className="h-8 w-8">
-                            <AvatarImage src={`https://avatar.vercel.sh/${member.email}`} />
-                            <AvatarFallback>
-                              {member.name
-                                .split(' ')
-                                .map((n) => n[0])
-                                .join('')}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <div className="font-medium">{member.name}</div>
-                            <div className="text-sm text-muted-foreground">
-                              {member.role === 'admin' ? 'Administrator' : 'Staff Member'}
+            <Card className="border shadow-sm">
+              <CardHeader className="p-5">
+                <CardTitle>Staff Members</CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                {isLoading ? (
+                  <div className="flex justify-center items-center p-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                  </div>
+                ) : filteredStaff.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center p-8 text-center">
+                    <Users className="h-12 w-12 text-muted-foreground mb-4" />
+                    <h3 className="text-lg font-semibold">No staff members found</h3>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      {searchTerm
+                        ? "Try adjusting your search query"
+                        : "Add your first staff member to get started"}
+                    </p>
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Staff Member</TableHead>
+                        <TableHead>Role</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Phone</TableHead>
+                        <TableHead>Joined</TableHead>
+                        <TableHead className="w-[100px]">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredStaff.map((member) => (
+                        <TableRow key={member.id}>
+                          <TableCell className="font-medium">
+                            <div className="flex items-center gap-3">
+                              <Avatar className="h-8 w-8">
+                                <AvatarImage src={`https://avatar.vercel.sh/${member.email}`} />
+                                <AvatarFallback>
+                                  {member.name
+                                    .split(' ')
+                                    .map((n) => n[0])
+                                    .join('')}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <div className="font-medium">{member.name}</div>
+                                <div className="text-sm text-muted-foreground">
+                                  {member.role === 'admin' ? 'Administrator' : 'Staff Member'}
+                                </div>
+                              </div>
                             </div>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={member.role === 'admin' ? 'default' : 'secondary'}>
-                          {member.role === 'admin' ? 'Admin' : 'Staff'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{member.email}</TableCell>
-                      <TableCell>{member.phone || '-'}</TableCell>
-                      <TableCell>
-                        {format(new Date(member.createdAt), 'MMM d, yyyy')}
-                      </TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                              <span className="sr-only">Open menu</span>
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                            <DropdownMenuItem
-                              onClick={() => handleOpenStaffForm(member)}
-                            >
-                              <Edit className="mr-2 h-4 w-4" />
-                              Edit
-                            </DropdownMenuItem>
-                            {member.id !== currentUser?.id && (
-                              <>
-                                <DropdownMenuSeparator />
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={member.role === 'admin' ? 'default' : 'secondary'}>
+                              {member.role === 'admin' ? 'Admin' : 'Staff'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{member.email}</TableCell>
+                          <TableCell>{member.phone || '-'}</TableCell>
+                          <TableCell>
+                            {format(new Date(member.createdAt), 'MMM d, yyyy')}
+                          </TableCell>
+                          <TableCell>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" className="h-8 w-8 p-0">
+                                  <span className="sr-only">Open menu</span>
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                 <DropdownMenuItem
-                                  className="text-red-600"
-                                  onClick={() => {
-                                    setSelectedStaff(member);
-                                    setIsDeleteDialogOpen(true);
-                                  }}
+                                  onClick={() => handleOpenStaffForm(member)}
                                 >
-                                  <Trash2 className="mr-2 h-4 w-4" />
-                                  Delete
+                                  <Edit className="mr-2 h-4 w-4" />
+                                  Edit
                                 </DropdownMenuItem>
-                              </>
+                                {member.id !== currentUser?.id && (
+                                  <>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem
+                                      className="text-red-600"
+                                      onClick={() => {
+                                        setSelectedStaff(member);
+                                        setIsDeleteDialogOpen(true);
+                                      }}
+                                    >
+                                      <Trash2 className="mr-2 h-4 w-4" />
+                                      Delete
+                                    </DropdownMenuItem>
+                                  </>
+                                )}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="attendance" className="space-y-4">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <div className="flex items-center gap-2">
+                <Label htmlFor="attendanceDate">Date:</Label>
+                <Input
+                  id="attendanceDate"
+                  type="date"
+                  value={attendanceDate}
+                  onChange={(e) => setAttendanceDate(e.target.value)}
+                  className="w-auto"
+                />
+              </div>
+              
+              <Button
+                variant="outline"
+                onClick={loadAttendanceData}
+                disabled={isAttendanceLoading}
+              >
+                <Calendar className="h-4 w-4 mr-2" />
+                Load Attendance
+              </Button>
+            </div>
+            
+            <Card className="border shadow-sm">
+              <CardHeader className="p-5">
+                <CardTitle>Staff Attendance for {format(new Date(attendanceDate), 'MMMM d, yyyy')}</CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                {isAttendanceLoading ? (
+                  <div className="flex justify-center items-center p-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                  </div>
+                ) : staffAttendance.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center p-8 text-center">
+                    <Calendar className="h-12 w-12 text-muted-foreground mb-4" />
+                    <h3 className="text-lg font-semibold">No attendance records</h3>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      No staff members found or attendance not marked yet
+                    </p>
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Staff Member</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Remarks</TableHead>
+                        <TableHead className="w-[200px]">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {staffAttendance.map((record) => (
+                        <TableRow key={record.staffId}>
+                          <TableCell className="font-medium">
+                            <div className="flex items-center gap-3">
+                              <Avatar className="h-8 w-8">
+                                <AvatarFallback>
+                                  {record.name
+                                    .split(' ')
+                                    .map((n) => n[0])
+                                    .join('')}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="font-medium">{record.name}</div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {record.isPresent === null ? (
+                              <Badge variant="outline">Not Marked</Badge>
+                            ) : record.isPresent ? (
+                              <Badge variant="success" className="bg-green-100 text-green-800">Present</Badge>
+                            ) : (
+                              <Badge variant="destructive">Absent</Badge>
                             )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-          </CardContent>
-        </Card>
+                          </TableCell>
+                          <TableCell>
+                            {record.remarks ? record.remarks : '-'}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Button
+                                variant={record.isPresent === true ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => handleMarkAttendance(record.staffId, true)}
+                              >
+                                <CheckCircle className="h-4 w-4 mr-1" />
+                                Present
+                              </Button>
+                              <Button
+                                variant={record.isPresent === false ? "destructive" : "outline"}
+                                size="sm"
+                                onClick={() => handleMarkAttendance(record.staffId, false)}
+                              >
+                                <XCircle className="h-4 w-4 mr-1" />
+                                Absent
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleOpenRemarksDialog(record.staffId)}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
 
       {/* Staff Form Dialog */}
@@ -435,6 +697,37 @@ export default function Staff() {
               onClick={() => selectedStaff && handleDeleteStaff(selectedStaff.id)}
             >
               Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Attendance Remarks Dialog */}
+      <Dialog open={isShowingAttendanceDialog} onOpenChange={setIsShowingAttendanceDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Update Attendance Remarks</DialogTitle>
+            <DialogDescription>
+              Add notes or details about this staff member's attendance.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="remarks">Remarks</Label>
+              <Input
+                id="remarks"
+                value={attendanceRemarks}
+                onChange={(e) => setAttendanceRemarks(e.target.value)}
+                placeholder="Enter attendance remarks or leave empty"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsShowingAttendanceDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveRemarks}>
+              Save Remarks
             </Button>
           </DialogFooter>
         </DialogContent>

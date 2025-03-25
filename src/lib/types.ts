@@ -13,6 +13,17 @@ export interface User {
   createdAt: Date;
 }
 
+export interface Staff extends User {
+  password?: string;
+  attendance?: AttendanceRecord[];
+}
+
+export interface AttendanceRecord {
+  date: string;
+  isPresent: boolean;
+  remarks?: string;
+}
+
 // Product Types
 export type ProductCategory = 
   | 'fans' 

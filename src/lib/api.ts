@@ -353,4 +353,62 @@ export const deleteOrder = async (id: string) => {
   }
 
   return response.json();
+};
+
+// Attendance functions
+export const recordAttendance = async (staffId: string, attendanceData: { date: string, isPresent: boolean, remarks?: string }) => {
+  const token = localStorage.getItem('token');
+  const response = await fetch(`${API_URL}/staff/${staffId}/attendance`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify(attendanceData),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to record attendance');
+  }
+
+  return response.json();
+};
+
+export const getStaffAttendance = async (staffId: string, startDate?: string, endDate?: string) => {
+  const token = localStorage.getItem('token');
+  
+  let url = `${API_URL}/staff/${staffId}/attendance`;
+  
+  // Add date range parameters if provided
+  if (startDate && endDate) {
+    url += `?startDate=${startDate}&endDate=${endDate}`;
+  }
+  
+  const response = await fetch(url, {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch staff attendance');
+  }
+
+  return response.json();
+};
+
+export const getAllStaffAttendanceByDate = async (date: string) => {
+  const token = localStorage.getItem('token');
+  const response = await fetch(`${API_URL}/staff/attendance/date?date=${date}`, {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch attendance for the specified date');
+  }
+
+  return response.json();
 }; 
