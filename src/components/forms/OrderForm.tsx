@@ -73,6 +73,7 @@ export default function OrderForm({ onSuccess }: OrderFormProps) {
   const [staffMembers, setStaffMembers] = useState<User[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [productsLoading, setProductsLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
   
   // Fetch products from API
   useEffect(() => {
@@ -92,7 +93,18 @@ export default function OrderForm({ onSuccess }: OrderFormProps) {
     loadProducts();
   }, []);
   
-  const availableProducts = (products || []).filter(product => product.stock > 0);
+  // Filter available products
+  const availableProducts = React.useMemo(() => {
+    return (products || [])
+      .filter(product => product.stock > 0)
+      .filter(product => {
+        if (!searchTerm) return true;
+        
+        const searchLower = searchTerm.toLowerCase();
+        const productName = (product.name || '').toLowerCase();
+        return productName.includes(searchLower);
+      });
+  }, [products, searchTerm]);
   
   // Fetch staff members when component mounts
   useEffect(() => {
@@ -544,15 +556,38 @@ export default function OrderForm({ onSuccess }: OrderFormProps) {
                               <span>Loading products...</span>
                             </div>
                           ) : (
-                            availableProducts.map((product) => (
-                              <SelectItem 
-                                key={product._id || product.id}
-                                value={String(product._id || product.id || '')}
-                                disabled={(product.stock === undefined || product.stock <= 0)}
-                              >
-                                {product.name || 'Unnamed Product'} - ₹{(product.price || 0).toFixed(2)} - Stock: {product.stock || 0}
-                              </SelectItem>
-                            ))
+                            <>
+                              <div className="px-2 py-1.5">
+                                <Input
+                                  placeholder="Search products..."
+                                  className="h-8 w-full"
+                                  value={searchTerm}
+                                  onChange={(e) => setSearchTerm(e.target.value)}
+                                  onClick={(e) => e.stopPropagation()}
+                                  onKeyDown={(e) => {
+                                    // Prevent select from closing on keydown
+                                    if (e.key !== 'Enter' && e.key !== 'Escape') {
+                                      e.stopPropagation();
+                                    }
+                                  }}
+                                />
+                              </div>
+                              {availableProducts.length > 0 ? (
+                                availableProducts.map((product) => (
+                                  <SelectItem 
+                                    key={product._id || product.id}
+                                    value={String(product._id || product.id || '')}
+                                    disabled={(product.stock === undefined || product.stock <= 0)}
+                                  >
+                                    {product.name || 'Unnamed Product'} - ₹{(product.price || 0).toFixed(2)} - Stock: {product.stock || 0}
+                                  </SelectItem>
+                                ))
+                              ) : (
+                                <div className="text-center py-2 text-muted-foreground">
+                                  No products found
+                                </div>
+                              )}
+                            </>
                           )}
                         </SelectContent>
                       </Select>

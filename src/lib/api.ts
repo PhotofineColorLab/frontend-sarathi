@@ -2,6 +2,7 @@ import { Order, OrderStatus, Product, User } from './types';
 
 const API_URL = 'https://backend-sarathi.onrender.com/api';
 
+
 // Auth functions
 export const loginStaff = async (email: string, password: string) => {
   try {
