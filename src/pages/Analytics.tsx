@@ -35,6 +35,8 @@ import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Order, Product } from '@/lib/types';
 import { fetchOrders, fetchProducts } from '@/lib/api';
 import { toast } from 'sonner';
+import { useIsMobile, useIsSmallMobile } from '@/hooks/use-mobile';
+import { cn } from '@/lib/utils';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ffc658', '#8dd1e1', '#a4de6c', '#d0ed57'];
 
@@ -42,6 +44,10 @@ export default function Analytics() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Responsive hooks
+  const isMobile = useIsMobile();
+  const isSmallMobile = useIsSmallMobile();
 
   // Fetch data from API
   useEffect(() => {
@@ -179,9 +185,9 @@ export default function Analytics() {
         fill="white" 
         textAnchor={x > cx ? 'start' : 'end'} 
         dominantBaseline="central"
-        fontSize={12}
+        fontSize={isSmallMobile ? 8 : 12}
       >
-        {`${(percent * 100).toFixed(0)}%`}
+        {isSmallMobile && percent < 0.05 ? '' : `${(percent * 100).toFixed(0)}%`}
       </text>
     );
   };
@@ -199,28 +205,29 @@ export default function Analytics() {
     trend: { value: number; positive: boolean } | null; 
     icon: React.ReactNode 
   }) => (
-    <Card className="dashboard-card">
-      <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-        <CardTitle className="text-sm font-medium">{title}</CardTitle>
+    <Card>
+      <CardHeader className={cn("flex flex-row items-center justify-between space-y-0 pb-2", 
+        isSmallMobile && "px-3 py-2"
+      )}>
+        <CardTitle className={cn("font-medium", isSmallMobile ? "text-xs" : "text-sm")}>
+          {title}
+        </CardTitle>
         {icon}
       </CardHeader>
-      <CardContent>
-        <div className="text-2xl font-bold">{value}</div>
-        <div className="flex items-center mt-1">
+      <CardContent className={cn(isSmallMobile && "px-3 py-2")}>
+        <div className={cn(isSmallMobile ? "text-base" : "text-2xl", "font-bold")}>{value}</div>
+        <p className={cn(
+          "text-muted-foreground flex items-center space-x-2",
+          isSmallMobile ? "text-xs mt-1" : "mt-2"
+        )}>
+          <span>{description}</span>
           {trend && (
-            <span className={`flex items-center text-xs ${trend.positive ? 'text-green-600' : 'text-red-600'}`}>
-              {trend.positive ? (
-                <ArrowUpRight className="h-3 w-3 mr-1" />
-              ) : (
-                <ArrowDownRight className="h-3 w-3 mr-1" />
-              )}
-              {trend.value}%
+            <span className={`flex items-center text-xs ${trend.positive ? 'text-green-500' : 'text-red-500'}`}>
+              {trend.positive ? <ArrowUpRight className={cn(isSmallMobile ? "h-3 w-3" : "h-4 w-4")} /> : <ArrowDownRight className={cn(isSmallMobile ? "h-3 w-3" : "h-4 w-4")} />}
+              <span>{trend.value}%</span>
             </span>
           )}
-          <p className="text-xs text-muted-foreground ml-2">
-            {description}
-          </p>
-        </div>
+        </p>
       </CardContent>
     </Card>
   );
@@ -238,107 +245,111 @@ export default function Analytics() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-8">
+      <div className="space-y-6">
         <div className="flex flex-col space-y-2">
           <h1 className="text-3xl font-bold tracking-tight animate-fade-in">Analytics</h1>
           <p className="text-muted-foreground animate-slide-in-bottom">
-            Get insights into your business performance with detailed analytics
+            Track your sales performance and inventory
           </p>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-4">
           <StatCard
             title="Total Revenue"
             value={formatCurrency(analytics.totalSales)}
-            description="vs. previous month"
+            description="Total sales"
             trend={{ value: 12.5, positive: true }}
-            icon={<TrendingUp className="w-4 h-4 text-muted-foreground" />}
+            icon={<TrendingUp className={cn(isSmallMobile ? "h-3.5 w-3.5" : "h-5 w-5", "text-muted-foreground")} />}
           />
-          
           <StatCard
-            title="Average Order Value"
-            value={formatCurrency(analytics.averageOrderValue)}
-            description="vs. previous month"
-            trend={{ value: 3.2, positive: true }}
-            icon={<BarChart4 className="w-4 h-4 text-muted-foreground" />}
-          />
-          
-          <StatCard
-            title="Total Orders"
+            title="Orders"
             value={analytics.totalOrders.toString()}
-            description="completed orders"
-            trend={{ value: 8.1, positive: true }}
-            icon={<ShoppingCart className="w-4 h-4 text-muted-foreground" />}
+            description="Total orders"
+            trend={{ value: 8.2, positive: true }}
+            icon={<ShoppingCart className={cn(isSmallMobile ? "h-3.5 w-3.5" : "h-5 w-5", "text-muted-foreground")} />}
           />
-          
+          <StatCard
+            title="Average Order"
+            value={formatCurrency(analytics.averageOrderValue)}
+            description="Per order"
+            trend={{ value: 3.1, positive: true }}
+            icon={<BarChart4 className={cn(isSmallMobile ? "h-3.5 w-3.5" : "h-5 w-5", "text-muted-foreground")} />}
+          />
           <StatCard
             title="Pending Orders"
             value={analytics.pendingOrders.toString()}
-            description="need processing"
+            description="Awaiting fulfillment"
             trend={null}
-            icon={<Users className="w-4 h-4 text-muted-foreground" />}
+            icon={<Users className={cn(isSmallMobile ? "h-3.5 w-3.5" : "h-5 w-5", "text-muted-foreground")} />}
           />
         </div>
 
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <Card className="dashboard-card">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-lg font-medium">Revenue Trend</CardTitle>
-                  <CardDescription>Revenue over the last 7 days</CardDescription>
-                </div>
-                <TrendingUp className="h-5 w-5 text-muted-foreground" />
-              </div>
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+          <Card className="md:col-span-2">
+            <CardHeader className={cn(isSmallMobile && "p-3")}>
+              <CardTitle className={cn(isSmallMobile ? "text-base" : "text-lg")}>
+                Revenue Over Time
+              </CardTitle>
+              <CardDescription className={cn(isSmallMobile && "text-xs")}>
+                Daily revenue for the past 7 days
+              </CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="h-[350px]">
+            <CardContent className={cn(isSmallMobile && "p-3")}>
+              <div className={cn("h-[300px]", isMobile && "h-[200px]")}>
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={salesByPeriod}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.2} />
+                  <LineChart
+                    data={salesByPeriod}
+                    margin={{
+                      top: 20,
+                      right: isSmallMobile ? 5 : 20,
+                      left: isSmallMobile ? 0 : 20,
+                      bottom: 20,
+                    }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
                     <XAxis 
                       dataKey="date" 
                       tickFormatter={(value) => {
                         const date = new Date(value);
-                        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                        return date.toLocaleDateString('en-US', { 
+                          month: isSmallMobile ? 'numeric' : 'short', 
+                          day: 'numeric' 
+                        });
                       }}
-                      axisLine={false}
-                      tickLine={false}
+                      tick={{ fontSize: isSmallMobile ? 10 : 12 }}
                     />
                     <YAxis 
-                      tickFormatter={(value) => `₹${value}`} 
-                      axisLine={false}
-                      tickLine={false}
+                      tickFormatter={(value) => isSmallMobile ? `₹${value/1000}k` : `₹${value}`}
+                      tick={{ fontSize: isSmallMobile ? 10 : 12 }}
+                      width={isSmallMobile ? 35 : 60}
                     />
                     <Tooltip 
-                      content={<CustomTooltip formatter={(value: number) => formatCurrency(value)} />}
+                      content={<CustomTooltip formatter={formatCurrency} />} 
                     />
-                    <Line 
-                      type="monotone" 
-                      dataKey="amount" 
-                      stroke="hsl(var(--primary))" 
-                      strokeWidth={3}
-                      dot={{ r: 4, strokeWidth: 2 }}
-                      activeDot={{ r: 6 }}
+                    <Line
+                      type="monotone"
+                      dataKey="amount"
+                      stroke="hsl(var(--primary))"
+                      strokeWidth={2}
+                      activeDot={{ r: 8 }}
                     />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
             </CardContent>
           </Card>
-
-          <Card className="dashboard-card">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-lg font-medium">Sales by Category</CardTitle>
-                  <CardDescription>Distribution of sales across product categories</CardDescription>
-                </div>
-                <PieChartIcon className="h-5 w-5 text-muted-foreground" />
-              </div>
+          
+          <Card>
+            <CardHeader className={cn(isSmallMobile && "p-3")}>
+              <CardTitle className={cn(isSmallMobile ? "text-base" : "text-lg")}>
+                Revenue by Category
+              </CardTitle>
+              <CardDescription className={cn(isSmallMobile && "text-xs")}>
+                Distribution of sales by product category
+              </CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="h-[350px]">
+            <CardContent className={cn(isSmallMobile && "p-3")}>
+              <div className={cn("h-[300px]", isMobile && "h-[250px]")}>
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
@@ -347,67 +358,92 @@ export default function Analytics() {
                       cy="50%"
                       labelLine={false}
                       label={renderCustomizedLabel}
-                      outerRadius={130}
+                      outerRadius={isSmallMobile ? 70 : 80}
                       fill="#8884d8"
                       dataKey="amount"
                     >
                       {salesByCategory.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        <Cell 
+                          key={`cell-${index}`} 
+                          fill={COLORS[index % COLORS.length]} 
+                        />
                       ))}
                     </Pie>
-                    <Tooltip content={<CustomTooltip formatter={(value: number) => formatCurrency(value)} />} />
-                    <Legend formatter={(value, entry, index) => {
-                      return (
-                        <span className="text-xs capitalize">
-                          {value}: {formatCurrency(salesByCategory[index]?.amount || 0)}
-                        </span>
-                      );
-                    }} />
+                    <Legend 
+                      layout={isSmallMobile ? "horizontal" : "vertical"}
+                      verticalAlign={isSmallMobile ? "bottom" : "middle"}
+                      align={isSmallMobile ? "center" : "right"}
+                      formatter={(value) => {
+                        // Truncate long category names on small screens
+                        if (isSmallMobile && value.length > 10) {
+                          return `${value.substring(0, 8)}...`;
+                        }
+                        return value;
+                      }}
+                    />
+                    <Tooltip 
+                      formatter={(value) => formatCurrency(Number(value))}
+                    />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
             </CardContent>
           </Card>
-        </div>
-
-        <Card className="dashboard-card">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-lg font-medium">Category Performance</CardTitle>
-                <CardDescription>Sales performance by category</CardDescription>
+          
+          <Card>
+            <CardHeader className={cn(isSmallMobile && "p-3")}>
+              <CardTitle className={cn(isSmallMobile ? "text-base" : "text-lg")}>
+                Top Selling Categories
+              </CardTitle>
+              <CardDescription className={cn(isSmallMobile && "text-xs")}>
+                Revenue by product category
+              </CardDescription>
+            </CardHeader>
+            <CardContent className={cn(isSmallMobile && "p-3")}>
+              <div className={cn("h-[300px]", isMobile && "h-[250px]")}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={salesByCategory.slice(0, isSmallMobile ? 5 : 7)}
+                    layout="vertical"
+                    margin={{
+                      top: 5,
+                      right: isSmallMobile ? 5 : 20,
+                      left: isSmallMobile ? 70 : 90,
+                      bottom: 5,
+                    }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
+                    <XAxis 
+                      type="number" 
+                      tickFormatter={(value) => isSmallMobile ? `₹${value/1000}k` : `₹${value}`}
+                      tick={{ fontSize: isSmallMobile ? 10 : 12 }}
+                    />
+                    <YAxis 
+                      type="category" 
+                      dataKey="category" 
+                      tick={{ fontSize: isSmallMobile ? 10 : 12 }}
+                      tickFormatter={(value) => {
+                        // Truncate long category names on small screens
+                        if (isSmallMobile && value.length > 10) {
+                          return `${value.substring(0, 8)}...`;
+                        }
+                        return value;
+                      }}
+                    />
+                    <Tooltip 
+                      content={<CustomTooltip formatter={formatCurrency} />} 
+                    />
+                    <Bar 
+                      dataKey="amount" 
+                      fill="hsl(var(--primary))" 
+                      radius={[0, 4, 4, 0]} 
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
-              <BarChart4 className="h-5 w-5 text-muted-foreground" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[350px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={salesByCategory}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.2} />
-                  <XAxis 
-                    dataKey="category" 
-                    axisLine={false}
-                    tickLine={false}
-                    tickFormatter={(value) => value.charAt(0).toUpperCase() + value.slice(1)}
-                  />
-                  <YAxis 
-                    tickFormatter={(value) => `₹${value}`} 
-                    axisLine={false}
-                    tickLine={false}
-                  />
-                  <Tooltip content={<CustomTooltip formatter={(value: number) => formatCurrency(value)} />} />
-                  <Bar 
-                    dataKey="amount" 
-                    fill="hsl(var(--primary))" 
-                    radius={[4, 4, 0, 0]}
-                    barSize={40}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </DashboardLayout>
   );

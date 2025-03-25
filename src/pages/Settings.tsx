@@ -11,9 +11,14 @@ import DashboardLayout from '@/components/layout/DashboardLayout';
 import { CheckIcon, Settings as SettingsIcon, User } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { useIsMobile, useIsSmallMobile, useIsTablet } from '@/hooks/use-mobile';
+import { cn } from '@/lib/utils';
 
 export default function Settings() {
   const { user } = useAuth();
+  const isMobile = useIsMobile();
+  const isSmallMobile = useIsSmallMobile();
+  const isTablet = useIsTablet();
   
   const handleSaveProfile = (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,49 +39,51 @@ export default function Settings() {
     <DashboardLayout>
       <div className="space-y-6">
         <div className="flex flex-col space-y-2">
-          <h1 className="text-3xl font-bold tracking-tight animate-fade-in">Settings</h1>
-          <p className="text-muted-foreground animate-slide-in-bottom">
+          <h1 className={cn("font-bold tracking-tight animate-fade-in", 
+                            isMobile ? "text-2xl" : "text-3xl")}>Settings</h1>
+          <p className="text-muted-foreground animate-slide-in-bottom text-sm">
             Manage your account settings and preferences
           </p>
         </div>
 
         <Tabs defaultValue="profile">
-          <TabsList className="mb-8">
-            <TabsTrigger value="profile" className="flex items-center gap-2">
-              <User className="h-4 w-4" />
+          <TabsList className={cn("mb-8", isMobile && "flex w-full flex-wrap gap-1")}>
+            <TabsTrigger value="profile" className={cn("flex items-center gap-2", 
+                                                       isMobile && "flex-1 min-w-20")}>
+              <User className={cn("h-4 w-4", isSmallMobile && "hidden")} />
               <span>Profile</span>
             </TabsTrigger>
-            <TabsTrigger value="notifications">Notifications</TabsTrigger>
-            <TabsTrigger value="appearance">Appearance</TabsTrigger>
+            <TabsTrigger value="notifications" className={cn(isMobile && "flex-1 min-w-20")}>Notifications</TabsTrigger>
+            <TabsTrigger value="appearance" className={cn(isMobile && "flex-1 min-w-20")}>Appearance</TabsTrigger>
           </TabsList>
           <TabsContent value="profile" className="space-y-6 animate-fade-in">
             <Card className="dashboard-card">
-              <CardHeader>
-                <CardTitle>Profile</CardTitle>
-                <CardDescription>
+              <CardHeader className={cn(isMobile && "p-4")}>
+                <CardTitle className={cn(isMobile && "text-lg")}>Profile</CardTitle>
+                <CardDescription className={cn(isMobile && "text-xs")}>
                   Manage your personal information
                 </CardDescription>
               </CardHeader>
               <form onSubmit={handleSaveProfile}>
-                <CardContent className="space-y-6">
-                  <div className="flex items-center gap-4">
-                    <Avatar className="h-16 w-16 border-2 border-primary/20">
+                <CardContent className={cn("space-y-6", isMobile && "p-4")}>
+                  <div className={cn("flex items-center gap-4", isMobile && "flex-col items-start")}>
+                    <Avatar className={cn("border-2 border-primary/20", isMobile ? "h-14 w-14" : "h-16 w-16")}>
                       <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${user?.name}`} />
                       <AvatarFallback>{user?.name.charAt(0)}</AvatarFallback>
                     </Avatar>
-                    <div>
+                    <div className={cn(isMobile && "mt-2 w-full")}>
                       <p className="text-sm font-medium">Profile Photo</p>
                       <div className="flex items-center gap-2 mt-1">
-                        <Button type="button" variant="outline" size="sm">
+                        <Button type="button" variant="outline" size={isMobile ? "sm" : "default"}>
                           Change
                         </Button>
-                        <Button type="button" variant="ghost" size="sm">
+                        <Button type="button" variant="ghost" size={isMobile ? "sm" : "default"}>
                           Remove
                         </Button>
                       </div>
                     </div>
                   </div>
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div className="grid grid-cols-1 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="fullName">Full Name</Label>
                       <Input id="fullName" placeholder="Enter your full name" defaultValue={user?.name} />
@@ -96,20 +103,20 @@ export default function Settings() {
                     </div>
                   </div>
                 </CardContent>
-                <CardFooter>
-                  <Button type="submit">Save Changes</Button>
+                <CardFooter className={cn(isMobile && "p-4")}>
+                  <Button type="submit" className={cn(isMobile && "w-full")}>Save Changes</Button>
                 </CardFooter>
               </form>
             </Card>
             
             <Card className="dashboard-card">
-              <CardHeader>
-                <CardTitle>Password</CardTitle>
-                <CardDescription>
+              <CardHeader className={cn(isMobile && "p-4")}>
+                <CardTitle className={cn(isMobile && "text-lg")}>Password</CardTitle>
+                <CardDescription className={cn(isMobile && "text-xs")}>
                   Update your password
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className={cn("space-y-4", isMobile && "p-4")}>
                 <div className="space-y-2">
                   <Label htmlFor="currentPassword">Current Password</Label>
                   <Input id="currentPassword" type="password" />
@@ -123,9 +130,10 @@ export default function Settings() {
                   <Input id="confirmPassword" type="password" />
                 </div>
               </CardContent>
-              <CardFooter>
+              <CardFooter className={cn(isMobile && "p-4")}>
                 <Button 
                   onClick={() => toast.success('Password updated successfully')}
+                  className={cn(isMobile && "w-full")}
                 >
                   Update Password
                 </Button>
@@ -135,17 +143,17 @@ export default function Settings() {
           
           <TabsContent value="notifications" className="animate-fade-in">
             <Card className="dashboard-card">
-              <CardHeader>
-                <CardTitle>Notifications</CardTitle>
-                <CardDescription>
+              <CardHeader className={cn(isMobile && "p-4")}>
+                <CardTitle className={cn(isMobile && "text-lg")}>Notifications</CardTitle>
+                <CardDescription className={cn(isMobile && "text-xs")}>
                   Configure how you receive notifications
                 </CardDescription>
               </CardHeader>
               <form onSubmit={handleSaveNotifications}>
-                <CardContent className="space-y-6">
+                <CardContent className={cn("space-y-6", isMobile && "p-4")}>
                   <div className="space-y-4">
                     <h3 className="text-sm font-medium">Email Notifications</h3>
-                    <div className="flex items-center justify-between">
+                    <div className={cn("flex items-center justify-between", isMobile && "flex-col items-start gap-2")}>
                       <div>
                         <p className="text-sm font-medium">New Orders</p>
                         <p className="text-xs text-muted-foreground">Receive notifications when new orders are placed</p>
@@ -153,7 +161,7 @@ export default function Settings() {
                       <Switch defaultChecked />
                     </div>
                     <Separator />
-                    <div className="flex items-center justify-between">
+                    <div className={cn("flex items-center justify-between", isMobile && "flex-col items-start gap-2")}>
                       <div>
                         <p className="text-sm font-medium">Low Stock Alerts</p>
                         <p className="text-xs text-muted-foreground">Receive alerts when products are running low on stock</p>
@@ -161,7 +169,7 @@ export default function Settings() {
                       <Switch defaultChecked />
                     </div>
                     <Separator />
-                    <div className="flex items-center justify-between">
+                    <div className={cn("flex items-center justify-between", isMobile && "flex-col items-start gap-2")}>
                       <div>
                         <p className="text-sm font-medium">Status Updates</p>
                         <p className="text-xs text-muted-foreground">Get notified when order statuses change</p>
@@ -169,7 +177,7 @@ export default function Settings() {
                       <Switch />
                     </div>
                     <Separator />
-                    <div className="flex items-center justify-between">
+                    <div className={cn("flex items-center justify-between", isMobile && "flex-col items-start gap-2")}>
                       <div>
                         <p className="text-sm font-medium">Weekly Reports</p>
                         <p className="text-xs text-muted-foreground">Receive weekly summaries of your shop's performance</p>
@@ -178,8 +186,8 @@ export default function Settings() {
                     </div>
                   </div>
                 </CardContent>
-                <CardFooter>
-                  <Button type="submit">Save Notification Settings</Button>
+                <CardFooter className={cn(isMobile && "p-4")}>
+                  <Button type="submit" className={cn(isMobile && "w-full")}>Save Notification Settings</Button>
                 </CardFooter>
               </form>
             </Card>
@@ -187,17 +195,17 @@ export default function Settings() {
           
           <TabsContent value="appearance" className="animate-fade-in">
             <Card className="dashboard-card">
-              <CardHeader>
-                <CardTitle>Appearance</CardTitle>
-                <CardDescription>
+              <CardHeader className={cn(isMobile && "p-4")}>
+                <CardTitle className={cn(isMobile && "text-lg")}>Appearance</CardTitle>
+                <CardDescription className={cn(isMobile && "text-xs")}>
                   Customize how the dashboard looks
                 </CardDescription>
               </CardHeader>
               <form onSubmit={handleSaveAppearance}>
-                <CardContent className="space-y-6">
+                <CardContent className={cn("space-y-6", isMobile && "p-4")}>
                   <div className="space-y-4">
                     <h3 className="text-sm font-medium">Theme</h3>
-                    <div className="grid grid-cols-3 gap-4">
+                    <div className={cn("grid gap-4", isMobile ? "grid-cols-1" : "grid-cols-3")}>
                       <div className="relative flex flex-col items-center gap-2">
                         <div className="h-20 w-full rounded-md bg-white border-2 border-primary/80 shadow-sm flex items-center justify-center">
                           <CheckIcon className="h-4 w-4 text-primary" />
@@ -216,7 +224,7 @@ export default function Settings() {
                   </div>
                   
                   <div className="space-y-4">
-                    <div className="flex items-center justify-between">
+                    <div className={cn("flex items-center justify-between", isMobile && "flex-col items-start gap-2")}>
                       <div>
                         <p className="text-sm font-medium">Animations</p>
                         <p className="text-xs text-muted-foreground">Enable animations throughout the interface</p>
@@ -226,7 +234,7 @@ export default function Settings() {
                     
                     <Separator />
                     
-                    <div className="flex items-center justify-between">
+                    <div className={cn("flex items-center justify-between", isMobile && "flex-col items-start gap-2")}>
                       <div>
                         <p className="text-sm font-medium">Compact Mode</p>
                         <p className="text-xs text-muted-foreground">Use a more compact layout to fit more content</p>
@@ -235,8 +243,8 @@ export default function Settings() {
                     </div>
                   </div>
                 </CardContent>
-                <CardFooter>
-                  <Button type="submit">Save Appearance Settings</Button>
+                <CardFooter className={cn(isMobile && "p-4")}>
+                  <Button type="submit" className={cn(isMobile && "w-full")}>Save Appearance Settings</Button>
                 </CardFooter>
               </form>
             </Card>

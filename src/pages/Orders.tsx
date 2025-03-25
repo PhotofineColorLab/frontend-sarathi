@@ -279,8 +279,10 @@ export default function Orders() {
     <DashboardLayout>
       <div className="space-y-6">
         <div className="flex flex-col space-y-2">
-          <h1 className="text-3xl font-bold tracking-tight animate-fade-in">Orders</h1>
-          <p className="text-muted-foreground animate-slide-in-bottom">
+          <h1 className={cn("font-bold tracking-tight animate-fade-in", 
+                            isMobile ? "text-2xl" : "text-3xl")}>Orders</h1>
+          <p className={cn("text-muted-foreground animate-slide-in-bottom",
+                          isSmallMobile ? "text-xs" : "text-sm")}>
             Manage customer orders and update their statuses
           </p>
         </div>
@@ -299,8 +301,8 @@ export default function Orders() {
         />
 
         <Card className="border shadow-sm">
-          <CardHeader className="px-5 pt-5 pb-0">
-            <CardTitle>Orders</CardTitle>
+          <CardHeader className={cn("px-5 pt-5 pb-0", isSmallMobile && "p-3 pb-0")}>
+            <CardTitle className={cn(isSmallMobile && "text-base")}>Orders</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             {isLoading ? (
