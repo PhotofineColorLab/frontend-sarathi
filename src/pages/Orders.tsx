@@ -20,6 +20,8 @@ import { useIsMobile, useIsSmallMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { OrderStatusBadge } from '@/components/orders/OrderStatusBadge';
 import { PaymentStatusBadge } from '@/components/orders/PaymentStatusBadge';
+import { Button } from '@/components/ui/button';
+import { ChevronLeft } from 'lucide-react';
 
 export default function Orders() {
   const navigate = useNavigate();
@@ -278,13 +280,24 @@ export default function Orders() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div className="flex flex-col space-y-2">
-          <h1 className={cn("font-bold tracking-tight animate-fade-in", 
+        <div className="flex items-center justify-between">
+          <div className="flex flex-col space-y-2">
+            <h1 className={cn("font-bold tracking-tight animate-fade-in", 
                             isMobile ? "text-2xl" : "text-3xl")}>Orders</h1>
-          <p className={cn("text-muted-foreground animate-slide-in-bottom",
+            <p className={cn("text-muted-foreground animate-slide-in-bottom",
                           isSmallMobile ? "text-xs" : "text-sm")}>
-            Manage customer orders and update their statuses
-          </p>
+              Manage customer orders and update their statuses
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            className="gap-1"
+            onClick={() => navigate('/')}
+          >
+            <ChevronLeft className="h-4 w-4" />
+            {!isSmallMobile && "Back to Dashboard"}
+            {isSmallMobile && "Dashboard"}
+          </Button>
         </div>
 
         <OrdersFilters

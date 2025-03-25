@@ -68,6 +68,7 @@ import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ProductCard } from '@/components/cards/ProductCard';
+import { useNavigate } from 'react-router-dom';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -111,6 +112,8 @@ export default function Products() {
 
   // Add a state for product view dialog
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+
+  const navigate = useNavigate();
 
   // Fetch products when component mounts or category changes
   useEffect(() => {
@@ -245,11 +248,24 @@ export default function Products() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div className="flex flex-col space-y-2">
-          <h1 className="text-3xl font-bold tracking-tight animate-fade-in">Inventory</h1>
-          <p className="text-muted-foreground animate-slide-in-bottom">
-            Manage your products, categories, and stock levels
-          </p>
+        <div className="flex items-center justify-between">
+          <div className="flex flex-col space-y-2">
+            <h1 className={cn("font-bold tracking-tight", 
+                            isMobile ? "text-2xl" : "text-3xl")}>Products</h1>
+            <p className={cn("text-muted-foreground",
+                          isSmallMobile ? "text-xs" : "text-sm")}>
+              Manage your inventory and product information
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            className="gap-1"
+            onClick={() => navigate('/')}
+          >
+            <ChevronLeft className="h-4 w-4" />
+            {!isSmallMobile && "Back to Dashboard"}
+            {isSmallMobile && "Dashboard"}
+          </Button>
         </div>
 
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">

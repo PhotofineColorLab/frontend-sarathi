@@ -1,13 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { BarChart4, Package, ShoppingCart, Users, TrendingUp, Clock, AlertTriangle, Loader2 } from 'lucide-react';
+import { BarChart4, Package, ShoppingCart, Clock, Loader2, TrendingUp } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import DashboardLayout from '@/components/layout/DashboardLayout';
-import { getSalesByPeriod } from '@/lib/data';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, CartesianGrid } from 'recharts';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import { Order, Product } from '@/lib/types';
 import { fetchOrders, fetchProducts } from '@/lib/api';
 import { toast } from 'sonner';
@@ -19,6 +16,7 @@ export default function Dashboard() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const navigate = useNavigate();
   
   // Add responsive hooks
   const isMobile = useIsMobile();
@@ -69,12 +67,16 @@ export default function Dashboard() {
       pendingOrders
     };
   };
+
+  // Sort the orders by createdAt date, most recent first
+  const recentOrders = [...orders].sort((a, b) => 
+    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
   
   const analytics = calculateAnalytics();
   const pendingOrders = orders.filter(order => order.status === 'pending').sort((a, b) => 
     new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   );
-  const recentSales = getSalesByPeriod();
   const productCount = products.length;
   const lowStockProducts = products.filter(p => p.stock < 15).sort((a, b) => a.stock - b.stock);
 
@@ -83,6 +85,15 @@ export default function Dashboard() {
       style: 'currency',
       currency: 'INR',
     }).format(value);
+  };
+
+  // Navigation handlers
+  const navigateToOrders = () => {
+    navigate('/orders');
+  };
+
+  const navigateToProducts = () => {
+    navigate('/products');
   };
 
   if (isLoading) {
@@ -108,7 +119,11 @@ export default function Dashboard() {
 
         {isAdmin && (
           <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <Card className="dashboard-card animate-slide-in-bottom" style={{ animationDelay: '100ms' }}>
+            <Card 
+              className="dashboard-card animate-slide-in-bottom cursor-pointer hover:shadow-md transition-shadow" 
+              style={{ animationDelay: '100ms' }}
+              onClick={navigateToOrders}
+            >
               <CardHeader className={cn("flex flex-row items-center justify-between space-y-0", 
                 isSmallMobile ? "px-3 py-2" : "pb-2"
               )}>
@@ -125,7 +140,11 @@ export default function Dashboard() {
               </CardContent>
             </Card>
             
-            <Card className="dashboard-card animate-slide-in-bottom" style={{ animationDelay: '200ms' }}>
+            <Card 
+              className="dashboard-card animate-slide-in-bottom cursor-pointer hover:shadow-md transition-shadow" 
+              style={{ animationDelay: '200ms' }}
+              onClick={navigateToOrders}
+            >
               <CardHeader className={cn("flex flex-row items-center justify-between space-y-0", 
                 isSmallMobile ? "px-3 py-2" : "pb-2"
               )}>
@@ -142,7 +161,11 @@ export default function Dashboard() {
               </CardContent>
             </Card>
             
-            <Card className="dashboard-card animate-slide-in-bottom" style={{ animationDelay: '300ms' }}>
+            <Card 
+              className="dashboard-card animate-slide-in-bottom cursor-pointer hover:shadow-md transition-shadow" 
+              style={{ animationDelay: '300ms' }}
+              onClick={navigateToProducts}
+            >
               <CardHeader className={cn("flex flex-row items-center justify-between space-y-0", 
                 isSmallMobile ? "px-3 py-2" : "pb-2"
               )}>
@@ -159,7 +182,11 @@ export default function Dashboard() {
               </CardContent>
             </Card>
             
-            <Card className="dashboard-card animate-slide-in-bottom" style={{ animationDelay: '400ms' }}>
+            <Card 
+              className="dashboard-card animate-slide-in-bottom cursor-pointer hover:shadow-md transition-shadow" 
+              style={{ animationDelay: '400ms' }}
+              onClick={navigateToOrders}
+            >
               <CardHeader className={cn("flex flex-row items-center justify-between space-y-0", 
                 isSmallMobile ? "px-3 py-2" : "pb-2"
               )}>
@@ -178,127 +205,31 @@ export default function Dashboard() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-          {isAdmin && (
-            <Card className="dashboard-card animate-slide-in-bottom col-span-1 lg:col-span-2" style={{ animationDelay: '500ms' }}>
-              <CardHeader className={cn(isSmallMobile && "p-3")}>
-                <CardTitle className={cn("font-medium", isSmallMobile ? "text-base" : "text-lg")}>
-                  Sales Overview
-                </CardTitle>
-              </CardHeader>
-              <CardContent className={cn(isSmallMobile && "p-2")}>
-                <div className={cn("w-full", isMobile ? "h-[200px]" : "h-[300px]")}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={recentSales}
-                      margin={isMobile ? { top: 5, right: 5, bottom: 5, left: 5 } : { top: 20, right: 20, bottom: 20, left: 20 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                      <XAxis 
-                        dataKey="date" 
-                        tickFormatter={(value) => {
-                          const date = new Date(value);
-                          return date.toLocaleDateString('en-US', { 
-                            month: isSmallMobile ? '2-digit' : 'short', 
-                            day: 'numeric' 
-                          });
-                        }}
-                        tick={{ fontSize: isSmallMobile ? 10 : 12 }}
-                      />
-                      <YAxis 
-                        tickFormatter={(value) => isSmallMobile ? `₹${value}` : `₹${value}`}
-                        tick={{ fontSize: isSmallMobile ? 10 : 12 }}
-                        width={isSmallMobile ? 35 : 40}
-                      />
-                      <Tooltip 
-                        formatter={(value) => [`₹${value}`, 'Revenue']}
-                        labelFormatter={(label) => {
-                          const date = new Date(label);
-                          return date.toLocaleDateString('en-US', { 
-                            weekday: isSmallMobile ? 'short' : 'long', 
-                            month: 'short', 
-                            day: 'numeric' 
-                          });
-                        }}
-                      />
-                      <Line 
-                        type="monotone" 
-                        dataKey="amount" 
-                        stroke="hsl(var(--primary))" 
-                        strokeWidth={isSmallMobile ? 1.5 : 2}
-                        activeDot={{ r: isSmallMobile ? 5 : 8 }}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-          
-          <div className={`space-y-6 ${!isAdmin ? 'lg:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-6' : ''}`}>
-            {/* Low Stock Alerts */}
-            <Card className="dashboard-card animate-slide-in-bottom" style={{ animationDelay: '550ms' }}>
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg font-medium">Low Stock Alerts</CardTitle>
-                  <AlertTriangle className="h-5 w-5 text-amber-500" />
-                </div>
-              </CardHeader>
-              <CardContent>
-                {lowStockProducts.length > 0 ? (
-                  <div className="space-y-3 max-h-[180px] overflow-y-auto pr-2">
-                    {lowStockProducts.map((product) => (
-                      <div key={product._id || product.id} className="flex items-center justify-between pb-2 border-b border-muted last:border-0 last:pb-0">
-                        <div className="flex items-center gap-2">
-                          <div className={`w-2 h-2 rounded-full ${product.stock < 5 ? 'bg-destructive' : 'bg-amber-500'}`} />
-                          <span className="font-medium text-sm">{product.name}</span>
-                        </div>
-                        <Badge variant={product.stock < 5 ? 'destructive' : 'outline'} className="text-xs">
-                          {product.stock} left
-                        </Badge>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-6">
-                    <p className="text-muted-foreground text-sm">All products have sufficient stock</p>
-                  </div>
-                )}
-                {lowStockProducts.length > 0 && (
-                  <div className="mt-3 pt-2">
-                    <Link 
-                      to="/products" 
-                      className="text-sm text-primary hover:underline block text-center"
-                    >
-                      View all products
-                    </Link>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-            
-            {/* Recent Orders */}
+        <div className="grid grid-cols-1 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Recent Orders - Now showing truly recent orders */}
             <Card className="dashboard-card animate-slide-in-bottom" style={{ animationDelay: '600ms' }}>
               <CardHeader className={cn(isSmallMobile && "p-3")}>
                 <CardTitle className={cn("font-medium", isSmallMobile ? "text-base" : "text-lg")}>
-                  {isMobile ? "Pending Orders" : "Recent Orders Pending"}
+                  {isMobile ? "Recent Orders" : "Recently Created Orders"}
                 </CardTitle>
               </CardHeader>
               <CardContent className={cn(isSmallMobile && "p-2")}>
-                {pendingOrders.length === 0 ? (
+                {recentOrders.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-6 text-center">
                     <Clock className="h-10 w-10 text-muted-foreground mb-3 opacity-25" />
-                    <p className="text-muted-foreground">No pending orders</p>
+                    <p className="text-muted-foreground">No orders found</p>
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {pendingOrders.slice(0, 4).map((order) => (
-                      <div key={order.id} className="flex items-center justify-between">
+                    {recentOrders.slice(0, 4).map((order) => (
+                      <div key={order.id || order._id} className="flex items-center justify-between">
                         <div className="space-y-1">
                           <p className={cn(
                             "font-medium",
                             isSmallMobile ? "text-sm" : ""
                           )}>
-                            Order #{order.orderNumber}
+                            Order #{order.orderNumber || (order._id && order._id.substring(0, 8))}
                           </p>
                           <div className="flex flex-col xs:flex-row xs:items-center gap-1 xs:gap-2">
                             <Badge 
@@ -326,13 +257,13 @@ export default function Dashboard() {
                         </div>
                       </div>
                     ))}
-                    {pendingOrders.length > 4 && (
+                    {recentOrders.length > 4 && (
                       <div className="text-center pt-2">
                         <Link 
                           to="/orders" 
                           className="text-sm text-primary hover:underline"
                         >
-                          View all {pendingOrders.length} pending orders
+                          View all orders
                         </Link>
                       </div>
                     )}
@@ -340,74 +271,75 @@ export default function Dashboard() {
                 )}
               </CardContent>
             </Card>
+            
+            {/* Low Stock Products */}
+            {isAdmin ? (
+              <Card className="dashboard-card animate-slide-in-bottom" style={{ animationDelay: '700ms' }}>
+                <CardHeader className={cn(isSmallMobile && "p-3")}>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className={cn("font-medium", isSmallMobile ? "text-base" : "text-lg")}>
+                      Low Stock Products
+                    </CardTitle>
+                    <Badge variant="outline" className="ml-2">
+                      {lowStockProducts.length} items
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className={cn(isSmallMobile && "p-2")}>
+                  {lowStockProducts.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-6 text-center">
+                      <Package className="h-10 w-10 text-muted-foreground mb-3 opacity-25" />
+                      <p className="text-muted-foreground">All products are well stocked</p>
+                    </div>
+                  ) : (
+                    <>
+                      <div className={cn(
+                        "rounded-md border", 
+                        isSmallMobile ? "text-sm" : ""
+                      )}>
+                        <div className="grid grid-cols-10 gap-2 p-3 bg-muted/50">
+                          <div className="col-span-5 text-muted-foreground font-medium text-xs">Product</div>
+                          <div className="col-span-2 text-muted-foreground font-medium text-xs">Price</div>
+                          <div className="col-span-3 text-muted-foreground font-medium text-xs">Stock</div>
+                        </div>
+                        <div className="divide-y">
+                          {lowStockProducts.slice(0, isMobile ? 3 : 5).map((product) => (
+                            <div key={product.id || product._id} className="grid grid-cols-10 gap-2 p-3">
+                              <div className="col-span-5 truncate font-medium">
+                                {product.name}
+                              </div>
+                              <div className="col-span-2 text-muted-foreground">
+                                {formatCurrency(product.price)}
+                              </div>
+                              <div className="col-span-3">
+                                <Badge 
+                                  variant={product.stock === 0 ? "destructive" : "outline"} 
+                                  className={cn(
+                                    isSmallMobile && "text-[10px] px-1 py-0 h-5"
+                                  )}
+                                >
+                                  {product.stock} {product.stock === 1 ? 'item' : 'items'}
+                                </Badge>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      
+                      {lowStockProducts.length > (isMobile ? 3 : 5) && (
+                        <div className="text-center pt-4">
+                          <Link to="/products" className="text-sm text-primary hover:underline">
+                            View all {lowStockProducts.length} low stock products
+                          </Link>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+            ) : null}
           </div>
         </div>
-
-        {isAdmin && (
-          <Card className="dashboard-card animate-slide-in-bottom" style={{ animationDelay: '700ms' }}>
-            <CardHeader className={cn(isSmallMobile && "p-3")}>
-              <div className="flex items-center justify-between">
-                <CardTitle className={cn("font-medium", isSmallMobile ? "text-base" : "text-lg")}>
-                  Low Stock Products
-                </CardTitle>
-                <Badge variant="outline" className="ml-2">
-                  {lowStockProducts.length} items
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent className={cn(isSmallMobile && "p-2")}>
-              {lowStockProducts.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-6 text-center">
-                  <Package className="h-10 w-10 text-muted-foreground mb-3 opacity-25" />
-                  <p className="text-muted-foreground">All products are well stocked</p>
-                </div>
-              ) : (
-                <>
-                  <div className={cn(
-                    "rounded-md border", 
-                    isSmallMobile ? "text-sm" : ""
-                  )}>
-                    <div className="grid grid-cols-10 gap-2 p-3 bg-muted/50">
-                      <div className="col-span-5 text-muted-foreground font-medium text-xs">Product</div>
-                      <div className="col-span-2 text-muted-foreground font-medium text-xs">Price</div>
-                      <div className="col-span-3 text-muted-foreground font-medium text-xs">Stock</div>
-                    </div>
-                    <div className="divide-y">
-                      {lowStockProducts.slice(0, isMobile ? 3 : 5).map((product) => (
-                        <div key={product.id || product._id} className="grid grid-cols-10 gap-2 p-3">
-                          <div className="col-span-5 truncate font-medium">
-                            {product.name}
-                          </div>
-                          <div className="col-span-2 text-muted-foreground">
-                            {formatCurrency(product.price)}
-                          </div>
-                          <div className="col-span-3">
-                            <Badge 
-                              variant={product.stock === 0 ? "destructive" : "outline"} 
-                              className={cn(
-                                isSmallMobile && "text-[10px] px-1 py-0 h-5"
-                              )}
-                            >
-                              {product.stock} {product.stock === 1 ? 'item' : 'items'}
-                            </Badge>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  
-                  {lowStockProducts.length > (isMobile ? 3 : 5) && (
-                    <div className="text-center pt-4">
-                      <Link to="/products" className="text-sm text-primary hover:underline">
-                        View all {lowStockProducts.length} low stock products
-                      </Link>
-                    </div>
-                  )}
-                </>
-              )}
-            </CardContent>
-          </Card>
-        )}
       </div>
     </DashboardLayout>
   );

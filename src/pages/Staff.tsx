@@ -341,7 +341,7 @@ export default function Staff() {
             Manage your staff members and their access permissions
           </p>
         </div>
-        
+
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="members">Staff Members</TabsTrigger>
@@ -349,23 +349,23 @@ export default function Staff() {
           </TabsList>
           
           <TabsContent value="members" className="space-y-4">
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div className="relative w-full md:max-w-sm">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  type="search"
-                  placeholder="Search staff..."
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Search staff..."
                   className="pl-8 w-full"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-              
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          
               <Button onClick={() => handleOpenStaffForm()} className="w-full md:w-auto">
-                <UserPlus className="h-4 w-4 mr-2" />
+            <UserPlus className="h-4 w-4 mr-2" />
                 {!isSmallMobile ? 'Add Staff Member' : 'Add Staff'}
-              </Button>
-            </div>
+          </Button>
+        </div>
 
             {isLoading ? (
               <div className="flex justify-center items-center h-48">
@@ -450,51 +450,51 @@ export default function Staff() {
             ) : (
               // Desktop table view
               <div className="border rounded-md">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Staff Member</TableHead>
-                      <TableHead>Role</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Phone</TableHead>
-                      <TableHead>Joined</TableHead>
-                      <TableHead className="w-[100px]">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredStaff.map((member) => (
-                      <TableRow key={member.id}>
-                        <TableCell className="font-medium">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Staff Member</TableHead>
+                    <TableHead>Role</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Phone</TableHead>
+                    <TableHead>Joined</TableHead>
+                    <TableHead className="w-[100px]">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredStaff.map((member) => (
+                    <TableRow key={member.id}>
+                      <TableCell className="font-medium">
                           <div className="flex items-center space-x-2">
-                            <Avatar className="h-8 w-8">
+                          <Avatar className="h-8 w-8">
                               <AvatarFallback>{member.name.slice(0, 2).toUpperCase()}</AvatarFallback>
-                            </Avatar>
+                          </Avatar>
                             <span>{member.name}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
+                        </div>
+                      </TableCell>
+                      <TableCell>
                           <Badge variant="outline" className="capitalize">
                             {member.role}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{member.email}</TableCell>
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{member.email}</TableCell>
                         <TableCell>{member.phone || 'N/A'}</TableCell>
                         <TableCell>{member.createdAt ? format(new Date(member.createdAt), 'PP') : 'N/A'}</TableCell>
-                        <TableCell>
+                      <TableCell>
                           <div className="flex justify-end">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" className="h-8 w-8 p-0">
-                                  <span className="sr-only">Open menu</span>
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                              <span className="sr-only">Open menu</span>
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                 <DropdownMenuItem onClick={() => handleOpenStaffForm(member)}>
-                                  <Edit className="mr-2 h-4 w-4" />
-                                  Edit
-                                </DropdownMenuItem>
+                              <Edit className="mr-2 h-4 w-4" />
+                              Edit
+                            </DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem
                                   onClick={() => {
@@ -506,14 +506,14 @@ export default function Staff() {
                                   <Trash2 className="mr-2 h-4 w-4" />
                                   Delete
                                 </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                           </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
               </div>
             )}
           </TabsContent>
