@@ -73,9 +73,9 @@ export default function Dashboard() {
   const lowStockProducts = products.filter(p => p.stock < 15).sort((a, b) => a.stock - b.stock);
 
   const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat('en-IN', {
       style: 'currency',
-      currency: 'USD',
+      currency: 'INR',
     }).format(value);
   };
 
@@ -177,10 +177,10 @@ export default function Dashboard() {
                         }}
                       />
                       <YAxis 
-                        tickFormatter={(value) => `$${value}`}
+                        tickFormatter={(value) => `₹${value}`}
                       />
                       <Tooltip 
-                        formatter={(value) => [`$${value}`, 'Revenue']}
+                        formatter={(value) => [`₹${value}`, 'Revenue']}
                         labelFormatter={(label) => {
                           const date = new Date(label);
                           return date.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });

@@ -144,9 +144,9 @@ export default function Analytics() {
   const salesByPeriod = calculateSalesByPeriod();
 
   const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat('en-IN', {
       style: 'currency',
-      currency: 'USD',
+      currency: 'INR',
     }).format(value);
   };
 
@@ -306,7 +306,7 @@ export default function Analytics() {
                       tickLine={false}
                     />
                     <YAxis 
-                      tickFormatter={(value) => `$${value}`} 
+                      tickFormatter={(value) => `₹${value}`} 
                       axisLine={false}
                       tickLine={false}
                     />
@@ -392,7 +392,7 @@ export default function Analytics() {
                     tickFormatter={(value) => value.charAt(0).toUpperCase() + value.slice(1)}
                   />
                   <YAxis 
-                    tickFormatter={(value) => `$${value}`} 
+                    tickFormatter={(value) => `₹${value}`} 
                     axisLine={false}
                     tickLine={false}
                   />

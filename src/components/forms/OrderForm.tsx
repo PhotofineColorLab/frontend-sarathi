@@ -547,10 +547,10 @@ export default function OrderForm({ onSuccess }: OrderFormProps) {
                             availableProducts.map((product) => (
                               <SelectItem 
                                 key={product._id || product.id}
-                                value={product._id || product.id}
-                                disabled={product.stock <= 0}
+                                value={String(product._id || product.id || '')}
+                                disabled={(product.stock === undefined || product.stock <= 0)}
                               >
-                                {product.name} - ${product.price.toFixed(2)} - Stock: {product.stock}
+                                {product.name || 'Unnamed Product'} - ₹{(product.price || 0).toFixed(2)} - Stock: {product.stock || 0}
                               </SelectItem>
                             ))
                           )}
@@ -598,8 +598,8 @@ export default function OrderForm({ onSuccess }: OrderFormProps) {
                             <TableRow key={item.id}>
                               <TableCell>{item.productName}</TableCell>
                               <TableCell className="text-center">{item.quantity}</TableCell>
-                              <TableCell className="text-right">${item.price.toFixed(2)}</TableCell>
-                              <TableCell className="text-right">${(item.price * item.quantity).toFixed(2)}</TableCell>
+                              <TableCell className="text-right">₹{item.price.toFixed(2)}</TableCell>
+                              <TableCell className="text-right">₹{(item.price * item.quantity).toFixed(2)}</TableCell>
                               <TableCell className="text-right">
                                 <Button
                                   type="button"
@@ -625,7 +625,7 @@ export default function OrderForm({ onSuccess }: OrderFormProps) {
                 {orderItems.length > 0 && (
                   <div className="flex justify-between items-center pt-4 border-t">
                     <span className="text-lg font-medium">Total Amount:</span>
-                    <span className="text-xl font-bold">${calculateTotal().toFixed(2)}</span>
+                    <span className="text-xl font-bold">₹{calculateTotal().toFixed(2)}</span>
                   </div>
                 )}
               </div>
