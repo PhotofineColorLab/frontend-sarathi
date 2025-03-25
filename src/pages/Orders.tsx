@@ -14,8 +14,12 @@ import OrderForm from '@/components/forms/OrderForm';
 import UpdateOrderForm from '@/components/forms/UpdateOrderForm';
 import { PaginationWrapper } from '@/components/ui/pagination-wrapper';
 import { fetchOrders, fetchOrdersByDateRange, fetchOrdersByAssignedTo, deleteOrder, updateOrder, markOrderAsPaid } from '@/lib/api';
-import { isAfter, isBefore, isEqual, startOfDay } from 'date-fns';
+import { isAfter, isBefore, isEqual, startOfDay, format } from 'date-fns';
 import { useAuth } from '@/contexts/AuthContext';
+import { useIsMobile, useIsSmallMobile } from '@/hooks/use-mobile';
+import { cn } from '@/lib/utils';
+import { OrderStatusBadge } from '@/components/orders/OrderStatusBadge';
+import { PaymentStatusBadge } from '@/components/orders/PaymentStatusBadge';
 
 export default function Orders() {
   const navigate = useNavigate();
@@ -32,6 +36,8 @@ export default function Orders() {
   const [isCreateMode, setIsCreateMode] = useState(false);
   const [isUpdateMode, setIsUpdateMode] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const isMobile = useIsMobile();
+  const isSmallMobile = useIsSmallMobile();
 
   useEffect(() => {
     loadOrders();
@@ -192,6 +198,53 @@ export default function Orders() {
     return matchesSearch && matchesDateRange;
   });
 
+  // Add a mobile-optimized card view for orders
+  const OrderCard = React.memo(({ 
+    order, 
+    onViewOrder, 
+    formatCurrency 
+  }: { 
+    order: Order, 
+    onViewOrder: (order: Order) => void,
+    formatCurrency: (value: number) => string
+  }) => {
+    const getDisplayOrderId = (order: Order) => {
+      if (order.orderNumber) {
+        return order.orderNumber;
+      } else {
+        return `#${(order._id || order.id || '').substring(0, 8)}`;
+      }
+    };
+    
+    return (
+      <div 
+        className="flex flex-col p-4 border rounded-lg mb-3 bg-card shadow-sm"
+        onClick={() => onViewOrder(order)}
+      >
+        <div className="flex justify-between items-start mb-2">
+          <div>
+            <h3 className="font-medium text-sm">{order.customerName}</h3>
+            <p className="text-xs text-muted-foreground">{getDisplayOrderId(order)}</p>
+          </div>
+          <div className="flex flex-col items-end">
+            <p className="font-semibold">{formatCurrency(order.total)}</p>
+            <p className="text-xs text-muted-foreground">
+              {format(new Date(order.createdAt), 'MMM dd, yyyy')}
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center justify-between mt-1">
+          <div className="flex items-center gap-2">
+            <OrderStatusBadge order={order} />
+            <PaymentStatusBadge order={order} />
+          </div>
+        </div>
+      </div>
+    );
+  });
+
+  OrderCard.displayName = 'OrderCard';
+
   if (isCreateMode) {
     return (
       <DashboardLayout>
@@ -259,28 +312,44 @@ export default function Orders() {
             ) : (
               <PaginationWrapper
                 data={filteredOrders}
-                itemsPerPage={7}
+                itemsPerPage={isMobile ? 5 : 7}
               >
                 {(paginatedOrders) => (
-                  <OrdersTable
-                    orders={paginatedOrders}
-                    onViewOrder={(order) => {
-                      setSelectedOrder(order);
-                      setIsViewDialogOpen(true);
-                    }}
-                    onUpdateOrder={handleUpdateOrder}
-                    onDeleteOrder={(order) => {
-                      setSelectedOrder(order);
-                      setIsDeleteDialogOpen(true);
-                    }}
-                    onMarkPaid={(order) => {
-                      setSelectedOrder(order);
-                      setIsMarkPaidDialogOpen(true);
-                    }}
-                    onStatusChange={handleStatusChange}
-                    isUpdateLoading={isUpdateLoading}
-                    formatCurrency={formatCurrency}
-                  />
+                  isMobile ? (
+                    <div className="p-4">
+                      {paginatedOrders.map(order => (
+                        <OrderCard 
+                          key={order._id || order.id}
+                          order={order}
+                          onViewOrder={() => {
+                            setSelectedOrder(order);
+                            setIsViewDialogOpen(true);
+                          }}
+                          formatCurrency={formatCurrency}
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <OrdersTable
+                      orders={paginatedOrders}
+                      onViewOrder={(order) => {
+                        setSelectedOrder(order);
+                        setIsViewDialogOpen(true);
+                      }}
+                      onUpdateOrder={handleUpdateOrder}
+                      onDeleteOrder={(order) => {
+                        setSelectedOrder(order);
+                        setIsDeleteDialogOpen(true);
+                      }}
+                      onMarkPaid={(order) => {
+                        setSelectedOrder(order);
+                        setIsMarkPaidDialogOpen(true);
+                      }}
+                      onStatusChange={handleStatusChange}
+                      isUpdateLoading={isUpdateLoading}
+                      formatCurrency={formatCurrency}
+                    />
+                  )
                 )}
               </PaginationWrapper>
             )}

@@ -10,6 +10,11 @@ import {
   Trash2,
   ChevronLeft,
   ChevronRight,
+  List,
+  Grid,
+  PlusCircle,
+  Eye,
+  Trash,
 } from 'lucide-react';
 import {
   Card,
@@ -58,6 +63,11 @@ import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Product, ProductCategory } from '@/lib/types';
 import { Textarea } from '@/components/ui/textarea';
 import { fetchProducts, createProduct, updateProduct as updateProductAPI, deleteProduct as deleteProductAPI } from '@/lib/api';
+import { useIsMobile, useIsSmallMobile } from '@/hooks/use-mobile';
+import { cn } from '@/lib/utils';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { EmptyState } from '@/components/ui/empty-state';
+import { ProductCard } from '@/components/cards/ProductCard';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -86,6 +96,7 @@ export default function Products() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
   
   // Form states
   const [productName, setProductName] = useState('');
@@ -94,6 +105,12 @@ export default function Products() {
   const [productCategory, setProductCategory] = useState<ProductCategory>('fans');
   const [productStock, setProductStock] = useState('');
   const [productImage, setProductImage] = useState('');
+
+  const isMobile = useIsMobile();
+  const isSmallMobile = useIsSmallMobile();
+
+  // Add a state for product view dialog
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
 
   // Fetch products when component mounts or category changes
   useEffect(() => {
@@ -132,19 +149,13 @@ export default function Products() {
     setSelectedProduct(null);
   };
 
-  const handleOpenProductForm = (product?: Product) => {
-    if (product) {
-      setSelectedProduct(product);
-      setProductName(product.name);
-      setProductDescription(product.description);
-      setProductPrice(product.price.toString());
-      setProductCategory(product.category as ProductCategory);
-      setProductStock(product.stock.toString());
-      setProductImage(product.image || '');
-      setIsEditing(true);
-    } else {
-      resetForm();
-    }
+  const handleViewProduct = (product: Product) => {
+    setSelectedProduct(product);
+    setIsViewDialogOpen(true);
+  };
+
+  const handleEditProduct = (product: any) => {
+    setSelectedProduct(product);
     setIsProductFormOpen(true);
   };
 
@@ -235,166 +246,262 @@ export default function Products() {
     <DashboardLayout>
       <div className="space-y-6">
         <div className="flex flex-col space-y-2">
-          <h1 className="text-3xl font-bold tracking-tight animate-fade-in">Products</h1>
+          <h1 className="text-3xl font-bold tracking-tight animate-fade-in">Inventory</h1>
           <p className="text-muted-foreground animate-slide-in-bottom">
-            Manage your product inventory and categories
+            Manage your products, categories, and stock levels
           </p>
         </div>
 
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div className="relative max-w-sm">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search products..."
-              className="pl-8 md:w-[300px] lg:w-[400px]"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-          
-          <Button onClick={() => handleOpenProductForm()}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Product
-          </Button>
-        </div>
-
-        <Card className="border shadow-sm">
-          <CardHeader className="px-5 pt-5 pb-0">
-            <CardTitle>
-              <Tabs 
-                defaultValue="all" 
-                className="w-full"
+          <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
+            <div className="relative flex-1 md:max-w-[300px]">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="search"
+                placeholder="Search products..."
+                className="pl-8"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+            
+            <div className="flex-shrink-0">
+              <Select
                 value={activeCategory}
                 onValueChange={(value) => setActiveCategory(value as ProductCategory | 'all')}
               >
-                <TabsList className="grid grid-cols-3 md:grid-cols-6 mb-4">
-                  <TabsTrigger value="all">All</TabsTrigger>
-                  <TabsTrigger value="fans">Fans</TabsTrigger>
-                  <TabsTrigger value="lights">Lights</TabsTrigger>
-                  <TabsTrigger value="switches">Switches</TabsTrigger>
-                  <TabsTrigger value="sockets">Sockets</TabsTrigger>
-                  <TabsTrigger value="panels">Panels</TabsTrigger>
-                </TabsList>
-              </Tabs>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            {isLoading ? (
-              <div className="flex flex-col items-center justify-center py-12">
-                <Loader2 className="h-12 w-12 text-primary mb-4 animate-spin" />
-                <p className="text-lg font-medium text-center">Loading products...</p>
-              </div>
-            ) : filteredProducts.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12">
-                <Package className="h-12 w-12 text-muted-foreground mb-4 opacity-20" />
-                <p className="text-lg font-medium text-center">No products found</p>
-                <p className="text-muted-foreground text-center mt-1">
-                  {searchTerm ? "Try adjusting your search." : "Add your first product to get started."}
-                </p>
-              </div>
-            ) : (
-              <div className="rounded-md border">
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-[300px]">Name</TableHead>
-                        <TableHead>Category</TableHead>
-                        <TableHead className="text-right">Price</TableHead>
-                        <TableHead className="text-center">Stock</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {paginatedProducts.map((product) => (
-                        <TableRow key={getProductId(product)}>
-                          <TableCell>
-                            <div>
-                              <p className="font-medium">{product.name}</p>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="outline">
-                              {productCategories.find(c => c.value === product.category)?.label || product.category}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right font-medium">{formatCurrency(product.price)}</TableCell>
-                          <TableCell className="text-center">
-                            <Badge 
-                              variant={product.stock > 10 ? "default" : product.stock > 0 ? "secondary" : "destructive"}
-                              className="w-12"
-                            >
-                              {product.stock}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" className="h-8 w-8 p-0">
-                                  <span className="sr-only">Open menu</span>
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                <DropdownMenuItem onClick={() => handleOpenProductForm(product)}>
-                                  <Edit className="mr-2 h-4 w-4" />
-                                  Edit
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                  onClick={() => {
-                                    setSelectedProduct(product);
-                                    setIsDeleteDialogOpen(true);
-                                  }}
-                                  className="text-destructive focus:text-destructive"
-                                >
-                                  <Trash2 className="mr-2 h-4 w-4" />
-                                  Delete
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-                
-                {/* Pagination */}
-                {totalPages > 1 && (
-                  <div className="flex items-center justify-between px-4 py-3 border-t">
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                        disabled={currentPage === 1}
-                      >
-                        <ChevronLeft className="h-4 w-4" />
-                      </Button>
-                      <span className="text-sm text-muted-foreground">
-                        Page {currentPage} of {totalPages}
-                      </span>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                        disabled={currentPage === totalPages}
-                      >
-                        <ChevronRight className="h-4 w-4" />
-                      </Button>
+                <SelectTrigger className={cn("w-full sm:w-auto", isMobile && "text-sm")}>
+                  <SelectValue placeholder="All Categories" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Categories</SelectItem>
+                  <SelectItem value="fans">Fans</SelectItem>
+                  <SelectItem value="lights">Lights</SelectItem>
+                  <SelectItem value="switches">Switches</SelectItem>
+                  <SelectItem value="sockets">Sockets</SelectItem>
+                  <SelectItem value="wires">Wires</SelectItem>
+                  <SelectItem value="conduits">Conduits</SelectItem>
+                  <SelectItem value="mcbs">MCBs</SelectItem>
+                  <SelectItem value="panels">Panels</SelectItem>
+                  <SelectItem value="tools">Tools</SelectItem>
+                  <SelectItem value="accessories">Accessories</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          
+          <div className="flex flex-row gap-2 justify-between sm:justify-end">
+            <Button
+              variant="outline"
+              size={isMobile ? "sm" : "default"}
+              onClick={() => setViewMode(viewMode === 'grid' ? 'table' : 'grid')}
+            >
+              {viewMode === 'grid' ? (
+                <>
+                  <List className="h-4 w-4 mr-2" />
+                  {!isSmallMobile && <span>Table View</span>}
+                </>
+              ) : (
+                <>
+                  <Grid className="h-4 w-4 mr-2" />
+                  {!isSmallMobile && <span>Grid View</span>}
+                </>
+              )}
+            </Button>
+            
+            <Button onClick={() => setIsProductFormOpen(true)} size={isMobile ? "sm" : "default"}>
+              <PlusCircle className="h-4 w-4 mr-2" />
+              {!isSmallMobile ? 'Add Product' : 'Add'}
+            </Button>
+          </div>
+        </div>
+
+        {isLoading ? (
+          <div className="flex justify-center items-center h-48">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+          </div>
+        ) : filteredProducts.length === 0 ? (
+          <EmptyState
+            icon={<Package className="h-10 w-10 text-muted-foreground" />}
+            title="No products found"
+            description={searchTerm 
+              ? "Try adjusting your search term or filter" 
+              : "Get started by creating your first product"
+            }
+            action={
+              <Button onClick={() => setIsProductFormOpen(true)}>
+                <PlusCircle className="h-4 w-4 mr-2" />
+                Add Product
+              </Button>
+            }
+          />
+        ) : viewMode === 'grid' ? (
+          <div className={cn(
+            "grid gap-4",
+            isMobile ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
+          )}>
+            {filteredProducts.map((product) => (
+              <ProductCard
+                key={product.id || product._id}
+                product={product}
+                onView={() => handleViewProduct(product)}
+                onEdit={() => handleEditProduct(product)}
+                onDelete={() => {
+                  setSelectedProduct(product);
+                  setIsDeleteDialogOpen(true);
+                }}
+                className={cn(
+                  isMobile && "p-3 text-sm" // Smaller padding and text for mobile
+                )}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="border rounded-md">
+            {isMobile ? (
+              // Responsive list view for mobile
+              <div className="divide-y">
+                {filteredProducts.map((product) => (
+                  <div 
+                    key={product.id || product._id}
+                    className="p-4 hover:bg-muted/50 transition-colors"
+                    onClick={() => handleViewProduct(product)}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-3">
+                        {product.image ? (
+                          <div className="w-10 h-10 rounded-md overflow-hidden bg-muted flex-shrink-0">
+                            <img 
+                              src={product.image} 
+                              alt={product.name} 
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        ) : (
+                          <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center flex-shrink-0">
+                            <Package className="h-5 w-5 text-muted-foreground" />
+                          </div>
+                        )}
+                        <div>
+                          <h3 className="font-medium text-sm">{product.name}</h3>
+                          <p className="text-xs text-muted-foreground capitalize">{product.category}</p>
+                        </div>
+                      </div>
+                      <Badge variant={product.stock > 10 ? "default" : "destructive"}>
+                        {product.stock > 0 ? `${product.stock} in stock` : 'Out of stock'}
+                      </Badge>
                     </div>
-                    <div className="text-sm text-muted-foreground">
-                      Showing {startIndex + 1} to {Math.min(startIndex + ITEMS_PER_PAGE, filteredProducts.length)} of {filteredProducts.length} products
+                    <div className="flex justify-between items-center">
+                      <p className="font-semibold">₹{product.price.toLocaleString()}</p>
+                      <div className="flex space-x-1">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-8 w-8 p-0"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEditProduct(product);
+                          }}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          className="h-8 w-8 p-0 text-destructive"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedProduct(product);
+                            setIsDeleteDialogOpen(true);
+                          }}
+                        >
+                          <Trash className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                   </div>
-                )}
+                ))}
               </div>
+            ) : (
+              // Desktop table view
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Category</TableHead>
+                    <TableHead>Price</TableHead>
+                    <TableHead>Stock</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredProducts.map((product) => (
+                    <TableRow key={product.id || product._id}>
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-3">
+                          {product.image ? (
+                            <div className="w-10 h-10 rounded-md overflow-hidden bg-muted">
+                              <img 
+                                src={product.image} 
+                                alt={product.name} 
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                          ) : (
+                            <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                              <Package className="h-5 w-5 text-muted-foreground" />
+                            </div>
+                          )}
+                          <div>
+                            <span 
+                              className="cursor-pointer hover:text-primary hover:underline"
+                              onClick={() => handleViewProduct(product)}
+                            >
+                              {product.name}
+                            </span>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="capitalize">{product.category}</TableCell>
+                      <TableCell>₹{product.price.toLocaleString()}</TableCell>
+                      <TableCell>
+                        <Badge variant={product.stock > 10 ? "default" : "destructive"}>
+                          {product.stock > 0 ? `${product.stock} in stock` : 'Out of stock'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end space-x-2">
+                          <Button 
+                            variant="ghost" 
+                            size="icon"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEditProduct(product);
+                            }}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="icon"
+                            className="text-destructive"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedProduct(product);
+                              setIsDeleteDialogOpen(true);
+                            }}
+                          >
+                            <Trash className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        )}
       </div>
 
       {/* Product form dialog */}
@@ -553,6 +660,84 @@ export default function Products() {
               Delete
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Product view dialog */}
+      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Product Details</DialogTitle>
+          </DialogHeader>
+          
+          {selectedProduct && (
+            <div className="space-y-4">
+              <div className="flex flex-col md:flex-row gap-6">
+                <div className="w-full md:w-1/3">
+                  {selectedProduct.image ? (
+                    <div className="aspect-square rounded-lg overflow-hidden bg-muted">
+                      <img 
+                        src={selectedProduct.image} 
+                        alt={selectedProduct.name} 
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  ) : (
+                    <div className="aspect-square rounded-lg bg-muted flex items-center justify-center">
+                      <Package className="h-12 w-12 text-muted-foreground opacity-50" />
+                    </div>
+                  )}
+                </div>
+                
+                <div className="flex-1 space-y-4">
+                  <div>
+                    <h2 className="text-2xl font-bold">{selectedProduct.name}</h2>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Badge className="capitalize">{selectedProduct.category}</Badge>
+                      <Badge variant={selectedProduct.stock > 10 ? "default" : "destructive"}>
+                        {selectedProduct.stock > 0 ? `${selectedProduct.stock} in stock` : 'Out of stock'}
+                      </Badge>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <p className="text-3xl font-bold">₹{selectedProduct.price.toLocaleString()}</p>
+                  </div>
+                  
+                  {selectedProduct.description && (
+                    <div>
+                      <h3 className="text-sm text-muted-foreground mb-1">Description</h3>
+                      <p className="text-sm">{selectedProduct.description}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+              <DialogFooter className="gap-2 sm:gap-0">
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setIsViewDialogOpen(false);
+                    handleEditProduct(selectedProduct);
+                  }}
+                >
+                  <Edit className="h-4 w-4 mr-2" />
+                  Edit Product
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={() => {
+                    setIsViewDialogOpen(false);
+                    setSelectedProduct(selectedProduct);
+                    setIsDeleteDialogOpen(true);
+                  }}
+                >
+                  <Trash className="h-4 w-4 mr-2" />
+                  Delete Product
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </DashboardLayout>

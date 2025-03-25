@@ -64,6 +64,7 @@ import { User as UserType, UserRole } from '@/lib/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { fetchStaff, createStaff, updateStaff, deleteStaff, recordAttendance, getStaffAttendance, getAllStaffAttendanceByDate } from '@/lib/api';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useIsMobile, useIsSmallMobile } from '@/hooks/use-mobile';
 
 export default function Staff() {
   const { user: currentUser } = useAuth();
@@ -96,6 +97,10 @@ export default function Staff() {
   const [selectedAttendanceStaff, setSelectedAttendanceStaff] = useState<string | null>(null);
   const [attendanceRemarks, setAttendanceRemarks] = useState('');
   const [isShowingAttendanceDialog, setIsShowingAttendanceDialog] = useState(false);
+  
+  // Mobile and small mobile detection
+  const isMobile = useIsMobile();
+  const isSmallMobile = useIsSmallMobile();
   
   // Fetch staff data on component mount
   useEffect(() => {
@@ -345,87 +350,138 @@ export default function Staff() {
           
           <TabsContent value="members" className="space-y-4">
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-              <div className="relative max-w-sm">
+              <div className="relative w-full md:max-w-sm">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   type="search"
                   placeholder="Search staff..."
-                  className="pl-8 md:w-[300px] lg:w-[400px]"
+                  className="pl-8 w-full"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
               
-              <Button onClick={() => handleOpenStaffForm()}>
+              <Button onClick={() => handleOpenStaffForm()} className="w-full md:w-auto">
                 <UserPlus className="h-4 w-4 mr-2" />
-                Add Staff Member
+                {!isSmallMobile ? 'Add Staff Member' : 'Add Staff'}
               </Button>
             </div>
 
-            <Card className="border shadow-sm">
-              <CardHeader className="p-5">
-                <CardTitle>Staff Members</CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                {isLoading ? (
-                  <div className="flex justify-center items-center p-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            {isLoading ? (
+              <div className="flex justify-center items-center h-48">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+              </div>
+            ) : filteredStaff.length === 0 ? (
+              <div className="flex flex-col items-center justify-center p-8 text-center">
+                <Users className="h-12 w-12 text-muted-foreground mb-4" />
+                <h3 className="text-lg font-semibold">No staff members found</h3>
+                <p className="text-sm text-muted-foreground mt-2">
+                  {searchTerm
+                    ? "Try adjusting your search query"
+                    : "Add your first staff member to get started"}
+                </p>
+              </div>
+            ) : isMobile ? (
+              // Mobile card view for staff members
+              <div className="space-y-4">
+                {filteredStaff.map((member) => (
+                  <div 
+                    key={member.id}
+                    className="border rounded-lg p-4 shadow-sm hover:border-primary transition-colors"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center space-x-3">
+                        <Avatar className="h-10 w-10">
+                          <AvatarFallback>{member.name.slice(0, 2).toUpperCase()}</AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <h3 className="font-medium">{member.name}</h3>
+                          <p className="text-sm text-muted-foreground">{member.email}</p>
+                        </div>
+                      </div>
+                      
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" className="h-8 w-8 p-0">
+                            <span className="sr-only">Open menu</span>
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                          <DropdownMenuItem onClick={() => handleOpenStaffForm(member)}>
+                            <Edit className="mr-2 h-4 w-4" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setSelectedStaff(member);
+                              setIsDeleteDialogOpen(true);
+                            }}
+                            className="text-destructive focus:text-destructive"
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                    
+                    <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
+                      <div>
+                        <p className="text-muted-foreground">Role</p>
+                        <Badge variant="outline" className="mt-1 capitalize">
+                          {member.role}
+                        </Badge>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Phone</p>
+                        <p>{member.phone || 'N/A'}</p>
+                      </div>
+                      <div className="col-span-2">
+                        <p className="text-muted-foreground">Joined</p>
+                        <p>{member.createdAt ? format(new Date(member.createdAt), 'PP') : 'N/A'}</p>
+                      </div>
+                    </div>
                   </div>
-                ) : filteredStaff.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center p-8 text-center">
-                    <Users className="h-12 w-12 text-muted-foreground mb-4" />
-                    <h3 className="text-lg font-semibold">No staff members found</h3>
-                    <p className="text-sm text-muted-foreground mt-2">
-                      {searchTerm
-                        ? "Try adjusting your search query"
-                        : "Add your first staff member to get started"}
-                    </p>
-                  </div>
-                ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Staff Member</TableHead>
-                        <TableHead>Role</TableHead>
-                        <TableHead>Email</TableHead>
-                        <TableHead>Phone</TableHead>
-                        <TableHead>Joined</TableHead>
-                        <TableHead className="w-[100px]">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredStaff.map((member) => (
-                        <TableRow key={member.id}>
-                          <TableCell className="font-medium">
-                            <div className="flex items-center gap-3">
-                              <Avatar className="h-8 w-8">
-                                <AvatarImage src={`https://avatar.vercel.sh/${member.email}`} />
-                                <AvatarFallback>
-                                  {member.name
-                                    .split(' ')
-                                    .map((n) => n[0])
-                                    .join('')}
-                                </AvatarFallback>
-                              </Avatar>
-                              <div>
-                                <div className="font-medium">{member.name}</div>
-                                <div className="text-sm text-muted-foreground">
-                                  {member.role === 'admin' ? 'Administrator' : 'Staff Member'}
-                                </div>
-                              </div>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant={member.role === 'admin' ? 'default' : 'secondary'}>
-                              {member.role === 'admin' ? 'Admin' : 'Staff'}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>{member.email}</TableCell>
-                          <TableCell>{member.phone || '-'}</TableCell>
-                          <TableCell>
-                            {format(new Date(member.createdAt), 'MMM d, yyyy')}
-                          </TableCell>
-                          <TableCell>
+                ))}
+              </div>
+            ) : (
+              // Desktop table view
+              <div className="border rounded-md">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Staff Member</TableHead>
+                      <TableHead>Role</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Phone</TableHead>
+                      <TableHead>Joined</TableHead>
+                      <TableHead className="w-[100px]">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredStaff.map((member) => (
+                      <TableRow key={member.id}>
+                        <TableCell className="font-medium">
+                          <div className="flex items-center space-x-2">
+                            <Avatar className="h-8 w-8">
+                              <AvatarFallback>{member.name.slice(0, 2).toUpperCase()}</AvatarFallback>
+                            </Avatar>
+                            <span>{member.name}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="capitalize">
+                            {member.role}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{member.email}</TableCell>
+                        <TableCell>{member.phone || 'N/A'}</TableCell>
+                        <TableCell>{member.createdAt ? format(new Date(member.createdAt), 'PP') : 'N/A'}</TableCell>
+                        <TableCell>
+                          <div className="flex justify-end">
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" className="h-8 w-8 p-0">
@@ -435,151 +491,217 @@ export default function Staff() {
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
                                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                <DropdownMenuItem
-                                  onClick={() => handleOpenStaffForm(member)}
-                                >
+                                <DropdownMenuItem onClick={() => handleOpenStaffForm(member)}>
                                   <Edit className="mr-2 h-4 w-4" />
                                   Edit
                                 </DropdownMenuItem>
-                                {member.id !== currentUser?.id && (
-                                  <>
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuItem
-                                      className="text-red-600"
-                                      onClick={() => {
-                                        setSelectedStaff(member);
-                                        setIsDeleteDialogOpen(true);
-                                      }}
-                                    >
-                                      <Trash2 className="mr-2 h-4 w-4" />
-                                      Delete
-                                    </DropdownMenuItem>
-                                  </>
-                                )}
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    setSelectedStaff(member);
+                                    setIsDeleteDialogOpen(true);
+                                  }}
+                                  className="text-destructive focus:text-destructive"
+                                >
+                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  Delete
+                                </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                )}
-              </CardContent>
-            </Card>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
           </TabsContent>
           
           <TabsContent value="attendance" className="space-y-4">
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-              <div className="flex items-center gap-2">
-                <Label htmlFor="attendanceDate">Date:</Label>
+            <div className={`flex ${isMobile ? 'flex-col' : 'flex-row'} gap-4 items-center justify-between`}>
+              <div className="w-full md:w-auto">
+                <Label htmlFor="attendance-date" className="mb-2 block">Select Date</Label>
                 <Input
-                  id="attendanceDate"
+                  id="attendance-date"
                   type="date"
                   value={attendanceDate}
                   onChange={(e) => setAttendanceDate(e.target.value)}
-                  className="w-auto"
+                  className="w-full md:w-auto"
                 />
               </div>
               
-              <Button
-                variant="outline"
-                onClick={loadAttendanceData}
-                disabled={isAttendanceLoading}
-              >
-                <Calendar className="h-4 w-4 mr-2" />
-                Load Attendance
-              </Button>
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="py-1 px-3">
+                  <Calendar className="h-4 w-4 mr-2" />
+                  {format(new Date(attendanceDate), 'PP')}
+                </Badge>
+                
+                <Badge variant="outline" className="py-1 px-3">
+                  <Users className="h-4 w-4 mr-2" />
+                  {staffAttendance.length} Staff
+                </Badge>
+              </div>
             </div>
-            
-            <Card className="border shadow-sm">
-              <CardHeader className="p-5">
-                <CardTitle>Staff Attendance for {format(new Date(attendanceDate), 'MMMM d, yyyy')}</CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                {isAttendanceLoading ? (
-                  <div className="flex justify-center items-center p-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+
+            {isAttendanceLoading ? (
+              <div className="flex justify-center items-center h-48">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+              </div>
+            ) : staffAttendance.length === 0 ? (
+              <div className="flex flex-col items-center justify-center p-12 text-center">
+                <Users className="h-12 w-12 text-muted-foreground mb-4" />
+                <h3 className="text-lg font-semibold">No staff members found</h3>
+                <p className="text-sm text-muted-foreground mt-2">
+                  Add staff members to record their attendance
+                </p>
+              </div>
+            ) : isMobile ? (
+              // Mobile card view for attendance
+              <div className="space-y-4">
+                {staffAttendance.map((record) => (
+                  <div 
+                    key={record.staffId}
+                    className="border rounded-lg p-4 shadow-sm"
+                  >
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex items-center space-x-3">
+                        <Avatar className="h-10 w-10">
+                          <AvatarFallback>{record.name.slice(0, 2).toUpperCase()}</AvatarFallback>
+                        </Avatar>
+                        <span className="font-medium">{record.name}</span>
+                      </div>
+                      
+                      <Badge 
+                        variant={record.isPresent === null ? "outline" : record.isPresent ? "default" : "destructive"}
+                        className="py-1 px-3"
+                      >
+                        {record.isPresent === null 
+                          ? "Not Marked" 
+                          : record.isPresent 
+                            ? "Present" 
+                            : "Absent"
+                        }
+                      </Badge>
+                    </div>
+                    
+                    <div className="flex flex-col gap-2">
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button 
+                          variant={record.isPresent === true ? "default" : "outline"}
+                          size="sm"
+                          className="w-full"
+                          onClick={() => handleMarkAttendance(record.staffId, true)}
+                        >
+                          <CheckCircle className="h-4 w-4 mr-2" />
+                          Present
+                        </Button>
+                        
+                        <Button 
+                          variant={record.isPresent === false ? "destructive" : "outline"}
+                          size="sm"
+                          className="w-full"
+                          onClick={() => handleMarkAttendance(record.staffId, false)}
+                        >
+                          <XCircle className="h-4 w-4 mr-2" />
+                          Absent
+                        </Button>
+                      </div>
+                      
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        className="w-full mt-2"
+                        onClick={() => handleOpenRemarksDialog(record.staffId)}
+                      >
+                        {record.remarks ? "Edit Remarks" : "Add Remarks"}
+                      </Button>
+                      
+                      {record.remarks && (
+                        <div className="mt-2 p-2 bg-muted rounded text-sm">
+                          <p className="text-xs text-muted-foreground mb-1">Remarks:</p>
+                          <p>{record.remarks}</p>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                ) : staffAttendance.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center p-8 text-center">
-                    <Calendar className="h-12 w-12 text-muted-foreground mb-4" />
-                    <h3 className="text-lg font-semibold">No attendance records</h3>
-                    <p className="text-sm text-muted-foreground mt-2">
-                      No staff members found or attendance not marked yet
-                    </p>
-                  </div>
-                ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Staff Member</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Remarks</TableHead>
-                        <TableHead className="w-[200px]">Actions</TableHead>
+                ))}
+              </div>
+            ) : (
+              // Desktop table view for attendance
+              <div className="border rounded-md">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Staff Member</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Actions</TableHead>
+                      <TableHead>Remarks</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {staffAttendance.map((record) => (
+                      <TableRow key={record.staffId}>
+                        <TableCell>
+                          <div className="flex items-center space-x-2">
+                            <Avatar className="h-8 w-8">
+                              <AvatarFallback>{record.name.slice(0, 2).toUpperCase()}</AvatarFallback>
+                            </Avatar>
+                            <span>{record.name}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge 
+                            variant={record.isPresent === null ? "outline" : record.isPresent ? "default" : "destructive"}
+                          >
+                            {record.isPresent === null 
+                              ? "Not Marked" 
+                              : record.isPresent 
+                                ? "Present" 
+                                : "Absent"
+                            }
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center space-x-2">
+                            <Button 
+                              variant={record.isPresent === true ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => handleMarkAttendance(record.staffId, true)}
+                            >
+                              <CheckCircle className="h-4 w-4 mr-2" />
+                              Present
+                            </Button>
+                            <Button 
+                              variant={record.isPresent === false ? "destructive" : "outline"}
+                              size="sm"
+                              onClick={() => handleMarkAttendance(record.staffId, false)}
+                            >
+                              <XCircle className="h-4 w-4 mr-2" />
+                              Absent
+                            </Button>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center justify-between max-w-xs">
+                            <div className="truncate max-w-[200px]">
+                              {record.remarks || <span className="text-muted-foreground italic">No remarks</span>}
+                            </div>
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => handleOpenRemarksDialog(record.staffId)}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
                       </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {staffAttendance.map((record) => (
-                        <TableRow key={record.staffId}>
-                          <TableCell className="font-medium">
-                            <div className="flex items-center gap-3">
-                              <Avatar className="h-8 w-8">
-                                <AvatarFallback>
-                                  {record.name
-                                    .split(' ')
-                                    .map((n) => n[0])
-                                    .join('')}
-                                </AvatarFallback>
-                              </Avatar>
-                              <div className="font-medium">{record.name}</div>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            {record.isPresent === null ? (
-                              <Badge variant="outline">Not Marked</Badge>
-                            ) : record.isPresent ? (
-                              <Badge variant="success" className="bg-green-100 text-green-800">Present</Badge>
-                            ) : (
-                              <Badge variant="destructive">Absent</Badge>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            {record.remarks ? record.remarks : '-'}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <Button
-                                variant={record.isPresent === true ? "default" : "outline"}
-                                size="sm"
-                                onClick={() => handleMarkAttendance(record.staffId, true)}
-                              >
-                                <CheckCircle className="h-4 w-4 mr-1" />
-                                Present
-                              </Button>
-                              <Button
-                                variant={record.isPresent === false ? "destructive" : "outline"}
-                                size="sm"
-                                onClick={() => handleMarkAttendance(record.staffId, false)}
-                              >
-                                <XCircle className="h-4 w-4 mr-1" />
-                                Absent
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleOpenRemarksDialog(record.staffId)}
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                )}
-              </CardContent>
-            </Card>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
           </TabsContent>
         </Tabs>
       </div>

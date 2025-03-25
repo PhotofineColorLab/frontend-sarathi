@@ -20,7 +20,6 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { OrderStatusBadge } from './OrderStatusBadge';
 import { PaymentStatusBadge } from './PaymentStatusBadge';
-import { OrderViewsTooltip } from './OrderViewsTooltip';
 import { Order, OrderStatus } from '@/lib/types';
 
 interface OrdersTableProps {
@@ -96,7 +95,6 @@ export function OrdersTable({
               <TableCell>{formatCurrency(order.total)}</TableCell>
               <TableCell>
                 <div className="flex items-center space-x-1">
-                  <OrderViewsTooltip orderId={getOrderId(order)} />
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" size="icon">
