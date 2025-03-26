@@ -69,6 +69,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ProductCard } from '@/components/cards/ProductCard';
 import { useNavigate } from 'react-router-dom';
+import { useNotifications } from '@/contexts/NotificationContext';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -115,6 +116,8 @@ export default function Products() {
 
   const navigate = useNavigate();
 
+  const { addNotification } = useNotifications();
+
   // Fetch products when component mounts or category changes
   useEffect(() => {
     const loadProducts = async () => {
@@ -160,66 +163,84 @@ export default function Products() {
   const handleEditProduct = (product: any) => {
     setSelectedProduct(product);
     setIsProductFormOpen(true);
+    setIsEditing(true);
   };
 
   const handleDeleteProduct = async (productId: string) => {
     try {
-      setIsDeleting(true);
+      // Find the product before deleting it
+      const productToDelete = products.find(p => 
+        (p._id || p.id) === productId
+      );
+      const productName = productToDelete?.name || 'Product';
+      
       await deleteProductAPI(productId);
-      setProducts(products.filter(product => product._id !== productId));
+      setProducts(products.filter(p => (p._id || p.id) !== productId));
       setIsDeleteDialogOpen(false);
+      
       toast.success('Product deleted successfully');
-    } catch (error: any) {
-      console.error('Error deleting product:', error);
-      toast.error(error.message || 'Failed to delete product');
-    } finally {
-      setIsDeleting(false);
+      
+      // Add notification for product deletion
+      addNotification({
+        type: 'product',
+        title: 'Product Deleted',
+        message: `${productName} has been successfully deleted`,
+        actionUrl: '/products'
+      });
+    } catch (error) {
+      console.error('Failed to delete product:', error);
+      toast.error('Failed to delete product');
     }
   };
 
   const handleSubmitProduct = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!productName || !productDescription || !productPrice || !productCategory || !productStock) {
-      toast.error('Please fill all required fields');
-      return;
-    }
-    
     setIsSubmitting(true);
-    
+
     try {
-      // Prepare product data
-      const productData = {
+      const formData = {
         name: productName,
         description: productDescription,
         price: parseFloat(productPrice),
-        category: productCategory,
         stock: parseInt(productStock),
+        category: productCategory,
         image: productImage,
       };
-      
-      let result;
+
+      let updatedProduct;
       
       if (isEditing && selectedProduct) {
-        // Update existing product
-        result = await updateProductAPI(selectedProduct._id!, productData);
+        const productId = selectedProduct._id || selectedProduct.id;
+        updatedProduct = await updateProductAPI(productId, formData);
         
-        // Update local state
-        setProducts(products.map(p => 
-          p._id === selectedProduct._id ? { ...p, ...result } : p
-        ));
+        setProducts(
+          products.map(p => (p._id || p.id) === productId ? updatedProduct : p)
+        );
         
         toast.success('Product updated successfully');
-      } else {
-        // Create new product
-        result = await createProduct(productData);
         
-        // Update local state
-        setProducts([result, ...products]);
+        // Add notification for product update
+        addNotification({
+          type: 'product',
+          title: 'Product Updated',
+          message: `${updatedProduct.name} has been successfully updated`,
+          actionUrl: '/products'
+        });
+      } else {
+        const newProduct = await createProduct(formData);
+        setProducts([newProduct, ...products]);
         
         toast.success('Product added successfully');
+        
+        // Add notification for new product
+        addNotification({
+          type: 'product',
+          title: 'New Product Added',
+          message: `${newProduct.name} has been successfully added to your inventory`,
+          actionUrl: '/products'
+        });
       }
-      
+
       setIsProductFormOpen(false);
       resetForm();
     } catch (error: any) {

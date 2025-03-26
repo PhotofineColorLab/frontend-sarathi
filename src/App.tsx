@@ -14,61 +14,64 @@ import Analytics from "@/pages/Analytics";
 import Settings from "@/pages/Settings";
 import Login from "@/pages/Login";
 import NotFound from "@/pages/NotFound";
+import { NotificationProvider } from '@/contexts/NotificationContext';
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner position="top-right" />
-      <BrowserRouter>
-        <AuthProvider>
-          <Routes>
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
-            <Route path="/login" element={<Login />} />
-            
-            <Route path="/dashboard" element={
-              <PrivateRoute>
-                <Dashboard />
-              </PrivateRoute>
-            } />
-            
-            <Route path="/orders" element={
-              <PrivateRoute>
-                <Orders />
-              </PrivateRoute>
-            } />
-            
-            <Route path="/products" element={
-              <PrivateRoute>
-                <Products />
-              </PrivateRoute>
-            } />
-            
-            <Route path="/staff" element={
-              <AdminRoute>
-                <Staff />
-              </AdminRoute>
-            } />
-            
-            <Route path="/analytics" element={
-              <AdminRoute>
-                <Analytics />
-              </AdminRoute>
-            } />
-            
-            <Route path="/settings" element={
-              <PrivateRoute>
-                <Settings />
-              </PrivateRoute>
-            } />
-            
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </AuthProvider>
-      </BrowserRouter>
-    </TooltipProvider>
+    <NotificationProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner position="top-right" />
+        <BrowserRouter>
+          <AuthProvider>
+            <Routes>
+              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+              <Route path="/login" element={<Login />} />
+              
+              <Route path="/dashboard" element={
+                <PrivateRoute>
+                  <Dashboard />
+                </PrivateRoute>
+              } />
+              
+              <Route path="/orders" element={
+                <PrivateRoute>
+                  <Orders />
+                </PrivateRoute>
+              } />
+              
+              <Route path="/products" element={
+                <PrivateRoute>
+                  <Products />
+                </PrivateRoute>
+              } />
+              
+              <Route path="/staff" element={
+                <AdminRoute>
+                  <Staff />
+                </AdminRoute>
+              } />
+              
+              <Route path="/analytics" element={
+                <AdminRoute>
+                  <Analytics />
+                </AdminRoute>
+              } />
+              
+              <Route path="/settings" element={
+                <PrivateRoute>
+                  <Settings />
+                </PrivateRoute>
+              } />
+              
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </AuthProvider>
+        </BrowserRouter>
+      </TooltipProvider>
+    </NotificationProvider>
   </QueryClientProvider>
 );
 

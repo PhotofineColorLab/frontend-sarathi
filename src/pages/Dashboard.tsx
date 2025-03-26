@@ -10,6 +10,8 @@ import { fetchOrders, fetchProducts } from '@/lib/api';
 import { toast } from 'sonner';
 import { useIsMobile, useIsSmallMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
+import { NotificationBell } from '@/components/ui/notification-bell';
+import { useNotifications } from '@/contexts/NotificationContext';
 
 export default function Dashboard() {
   const { user, isAdmin } = useAuth();
@@ -17,6 +19,7 @@ export default function Dashboard() {
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
+  const { addNotification } = useNotifications();
   
   // Add responsive hooks
   const isMobile = useIsMobile();
@@ -35,6 +38,18 @@ export default function Dashboard() {
         
         setOrders(ordersData);
         setProducts(productsData);
+        
+        // Add a notification if we find any products with low stock
+        const lowStockItems = productsData.filter(p => p.stock < 15);
+        if (lowStockItems.length > 0) {
+          // Create a real notification for low stock products
+          addNotification({
+            type: 'product',
+            title: 'Low Stock Alert',
+            message: `${lowStockItems.length} products have low stock and need attention`,
+            actionUrl: '/products'
+          });
+        }
       } catch (error) {
         console.error('Error loading dashboard data:', error);
         toast.error('Failed to load dashboard data');
@@ -110,11 +125,16 @@ export default function Dashboard() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div className="flex flex-col space-y-2">
-          <h1 className="text-3xl font-bold tracking-tight animate-fade-in">Dashboard</h1>
-          <p className="text-muted-foreground animate-slide-in-bottom">
-            Welcome back, {user?.name}! Here's a summary of your shop.
-          </p>
+        <div className="flex justify-between items-center">
+          <div className="flex flex-col space-y-2">
+            <h1 className={cn("font-bold tracking-tight animate-fade-in", 
+                            isMobile ? "text-2xl" : "text-3xl")}>Dashboard</h1>
+            <p className={cn("text-muted-foreground animate-slide-in-bottom",
+                          isSmallMobile ? "text-xs" : "text-sm")}>
+              Welcome back, {user?.name}! Here's a summary of your shop.
+            </p>
+          </div>
+          <NotificationBell />
         </div>
 
         {isAdmin && (

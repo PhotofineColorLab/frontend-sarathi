@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Loader2, Plus, Trash2, Upload } from 'lucide-react';
+import { Loader2, Plus, Trash2, Upload, Search } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
@@ -36,9 +36,11 @@ import { Card, CardContent } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 import { Order, OrderStatus, PaymentCondition, Product, OrderItem, User } from '@/lib/types';
-import { getProducts, updateProduct } from '@/lib/data';
-import { updateOrder, updateOrderWithImage, fetchStaff } from '@/lib/api';
+import { updateOrder, updateOrderWithImage, fetchStaff, fetchProducts } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { cn } from '@/lib/utils';
+import { useNotifications } from '@/contexts/NotificationContext';
 
 // Order form schema
 const orderFormSchema = z.object({
@@ -62,6 +64,7 @@ interface UpdateOrderFormProps {
 export default function UpdateOrderForm({ order, onSuccess, onCancel }: UpdateOrderFormProps) {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { addNotification } = useNotifications();
   const [isLoading, setIsLoading] = useState(false);
   const [orderImage, setOrderImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(order.orderImage || null);
@@ -69,9 +72,28 @@ export default function UpdateOrderForm({ order, onSuccess, onCancel }: UpdateOr
   const [selectedProduct, setSelectedProduct] = useState<string>('');
   const [quantity, setQuantity] = useState<number>(1);
   const [staffMembers, setStaffMembers] = useState<User[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [isLoadingProducts, setIsLoadingProducts] = useState(true);
+  const [productSearch, setProductSearch] = useState('');
+  const [showProductResults, setShowProductResults] = useState(false);
   
-  const products = getProducts();
-  const availableProducts = products.filter(product => product.stock > 0);
+  // Fetch products from API when component mounts
+  useEffect(() => {
+    const loadProducts = async () => {
+      setIsLoadingProducts(true);
+      try {
+        const productsData = await fetchProducts();
+        setProducts(productsData);
+      } catch (error) {
+        console.error("Error loading products:", error);
+        toast.error("Failed to load products");
+      } finally {
+        setIsLoadingProducts(false);
+      }
+    };
+    
+    loadProducts();
+  }, []);
   
   // Fetch staff members when component mounts
   useEffect(() => {
@@ -132,11 +154,23 @@ export default function UpdateOrderForm({ order, onSuccess, onCancel }: UpdateOr
     }
   };
 
+  // Filter products based on search term
+  const filteredProducts = productSearch.trim() === ''
+    ? products
+    : products.filter(product => {
+        // Type assertion for products that might have 'sku' property
+        const productWithSku = product as (Product & { sku?: string });
+        
+        return product.name.toLowerCase().includes(productSearch.toLowerCase()) ||
+          (productWithSku.sku && typeof productWithSku.sku === 'string' && productWithSku.sku.toLowerCase().includes(productSearch.toLowerCase())) ||
+          (product.category && product.category.toLowerCase().includes(productSearch.toLowerCase()));
+      });
+
   // Add item to order
   const handleAddItem = () => {
     if (!selectedProduct || quantity <= 0) return;
     
-    const product = products.find(p => p.id === selectedProduct);
+    const product = products.find(p => (p._id || p.id) === selectedProduct);
     if (!product) return;
     
     // Check if we already have this product in our items
@@ -151,7 +185,7 @@ export default function UpdateOrderForm({ order, onSuccess, onCancel }: UpdateOr
       // Add new item
       const newItem: OrderItem = {
         id: Math.random().toString(36).substring(2, 9),
-        productId: product.id,
+        productId: product._id || product.id,
         productName: product.name,
         quantity: quantity,
         price: product.price,
@@ -161,7 +195,16 @@ export default function UpdateOrderForm({ order, onSuccess, onCancel }: UpdateOr
     
     // Reset selection
     setSelectedProduct('');
+    setProductSearch('');
     setQuantity(1);
+    setShowProductResults(false);
+  };
+
+  // Handle product selection from search results
+  const handleSelectProduct = (product: Product) => {
+    setSelectedProduct(product._id || product.id);
+    setProductSearch(product.name);
+    setShowProductResults(false);
   };
 
   // Remove item from order
@@ -227,6 +270,14 @@ export default function UpdateOrderForm({ order, onSuccess, onCancel }: UpdateOr
       }
       
       toast.success('Order updated successfully');
+      
+      // Add notification for order update
+      addNotification({
+        type: 'order',
+        title: 'Order Updated',
+        message: `Order #${order.orderNumber || order._id.substring(0, 8)} has been updated`,
+        actionUrl: '/orders'
+      });
       
       if (onSuccess) {
         onSuccess();
@@ -451,50 +502,93 @@ export default function UpdateOrderForm({ order, onSuccess, onCancel }: UpdateOr
               <div className="space-y-4">
                 <h3 className="text-lg font-medium">Order Items</h3>
                 
-                <div className="flex flex-col space-y-2">
-                  <div className="grid grid-cols-3 gap-2">
-                    <div className="col-span-2">
-                      <Select
-                        value={selectedProduct}
-                        onValueChange={setSelectedProduct}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select product" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {products.map((product) => (
-                            <SelectItem 
-                              key={product.id}
-                              value={product.id}
-                              disabled={product.stock <= 0}
-                            >
-                              {product.name} - ₹{product.price.toFixed(2)} - Stock: {product.stock}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
+                <div className="space-y-2">
+                  <div className="relative">
+                    <div className="flex items-center border rounded-md">
+                      <div className="relative flex-1">
+                        <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                          placeholder="Search products by name, category, or SKU..."
+                          className="pl-8 border-0 focus-visible:ring-0"
+                          value={productSearch}
+                          onChange={(e) => {
+                            setProductSearch(e.target.value);
+                            setShowProductResults(true);
+                          }}
+                          onFocus={() => setShowProductResults(true)}
+                        />
+                      </div>
                       <Input
                         type="number"
                         min="1"
                         value={quantity}
                         onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
                         placeholder="Qty"
+                        className="w-20 h-10 border-0 focus-visible:ring-0 border-l rounded-none"
                       />
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="rounded-l-none"
+                        onClick={handleAddItem}
+                        disabled={!selectedProduct}
+                      >
+                        Add
+                      </Button>
                     </div>
+                    
+                    {/* Search results */}
+                    {showProductResults && productSearch && (
+                      <div className="absolute w-full z-10 mt-1 border rounded-md bg-background shadow-lg">
+                        <ScrollArea className="h-60">
+                          {isLoadingProducts ? (
+                            <div className="p-4 text-center">
+                              <Loader2 className="h-5 w-5 mx-auto animate-spin text-muted-foreground" />
+                              <p className="text-sm text-muted-foreground mt-2">Loading products...</p>
+                            </div>
+                          ) : filteredProducts.length === 0 ? (
+                            <div className="p-4 text-center text-muted-foreground">
+                              No products found
+                            </div>
+                          ) : (
+                            <div>
+                              {filteredProducts.map((product) => {
+                                // Type assertion for product in the UI
+                                const productWithSku = product as (Product & { sku?: string });
+                                
+                                return (
+                                  <div
+                                    key={product._id || product.id}
+                                    className={cn(
+                                      "flex items-center justify-between p-3 cursor-pointer hover:bg-muted transition-colors",
+                                      product.stock <= 0 && "opacity-50"
+                                    )}
+                                    onClick={() => product.stock > 0 && handleSelectProduct(product)}
+                                  >
+                                    <div>
+                                      <div className="font-medium">{product.name}</div>
+                                      <div className="text-sm text-muted-foreground">
+                                        {product.category} {productWithSku.sku && `• SKU: ${productWithSku.sku}`}
+                                      </div>
+                                    </div>
+                                    <div className="text-right">
+                                      <div>₹{product.price.toFixed(2)}</div>
+                                      <div className={cn(
+                                        "text-xs",
+                                        product.stock <= 5 ? "text-destructive" : "text-muted-foreground"
+                                      )}>
+                                        Stock: {product.stock}
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </ScrollArea>
+                      </div>
+                    )}
                   </div>
-                  
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full"
-                    onClick={handleAddItem}
-                    disabled={!selectedProduct}
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Item
-                  </Button>
                 </div>
                 
                 {orderItems.length > 0 ? (

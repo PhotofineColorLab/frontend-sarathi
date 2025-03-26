@@ -22,6 +22,7 @@ import { OrderStatusBadge } from '@/components/orders/OrderStatusBadge';
 import { PaymentStatusBadge } from '@/components/orders/PaymentStatusBadge';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft } from 'lucide-react';
+import { useNotifications } from '@/contexts/NotificationContext';
 
 export default function Orders() {
   const navigate = useNavigate();
@@ -40,6 +41,7 @@ export default function Orders() {
   const [isLoading, setIsLoading] = useState(true);
   const isMobile = useIsMobile();
   const isSmallMobile = useIsSmallMobile();
+  const { addNotification } = useNotifications();
 
   useEffect(() => {
     loadOrders();
@@ -159,6 +161,14 @@ export default function Orders() {
       );
       
       toast.success('Order marked as paid');
+      
+      // Add notification when an order is marked as paid
+      addNotification({
+        type: 'order',
+        title: 'Order Marked as Paid',
+        message: `Order #${updatedOrder.orderNumber || orderId.substring(0, 8)} has been marked as paid`,
+        actionUrl: '/orders'
+      });
     } catch (error) {
       console.error(error);
       toast.error('Failed to mark order as paid');
@@ -170,9 +180,22 @@ export default function Orders() {
   const handleDeleteOrder = async (orderId: string) => {
     try {
       await deleteOrder(orderId);
+      
+      // Find the order before removing it from the state
+      const orderToDelete = orders.find(order => order._id === orderId);
+      const orderNumber = orderToDelete?.orderNumber || orderId.substring(0, 8);
+      
       setOrders(orders.filter(order => order._id !== orderId));
       setIsDeleteDialogOpen(false);
       toast.success('Order deleted successfully');
+      
+      // Add notification when an order is deleted
+      addNotification({
+        type: 'order',
+        title: 'Order Deleted',
+        message: `Order #${orderNumber} has been successfully deleted`,
+        actionUrl: '/orders'
+      });
     } catch (error) {
       console.error(error);
       toast.error('Failed to delete order');
