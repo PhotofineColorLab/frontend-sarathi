@@ -101,12 +101,12 @@ export default function Products() {
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
   
   // Form states
-  const [productName, setProductName] = useState('');
-  const [productDescription, setProductDescription] = useState('');
-  const [productPrice, setProductPrice] = useState('');
-  const [productCategory, setProductCategory] = useState<ProductCategory>('fans');
-  const [productStock, setProductStock] = useState('');
-  const [productImage, setProductImage] = useState('');
+  const [productName, setProductName] = useState(() => selectedProduct?.name || '');
+  const [productDescription, setProductDescription] = useState(() => selectedProduct?.description || '');
+  const [productPrice, setProductPrice] = useState(() => selectedProduct?.price ? selectedProduct.price.toString() : '');
+  const [productCategory, setProductCategory] = useState<ProductCategory>(() => selectedProduct?.category as ProductCategory || 'fans');
+  const [productStock, setProductStock] = useState(() => selectedProduct?.stock ? selectedProduct.stock.toString() : '');
+  const [productImage, setProductImage] = useState(() => selectedProduct?.image || '');
 
   const isMobile = useIsMobile();
   const isSmallMobile = useIsSmallMobile();
@@ -136,6 +136,21 @@ export default function Products() {
     
     loadProducts();
   }, [activeCategory]);
+
+  // Populate form fields when editing a product
+  useEffect(() => {
+    if (selectedProduct && isEditing) {
+      setProductName(selectedProduct.name || '');
+      setProductDescription(selectedProduct.description || '');
+      setProductPrice(selectedProduct.price.toString() || '');
+      setProductCategory(selectedProduct.category || 'fans');
+      setProductStock(selectedProduct.stock.toString() || '');
+      setProductImage(selectedProduct.image || '');
+    } else if (!isEditing) {
+      // Reset form when not editing
+      resetForm();
+    }
+  }, [selectedProduct, isEditing]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-IN', {

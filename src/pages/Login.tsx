@@ -61,7 +61,7 @@ export default function Login() {
           <div className="rounded-full bg-primary p-2 w-12 h-12 flex items-center justify-center">
             <LockKeyhole className="h-6 w-6 text-primary-foreground" />
           </div>
-          <h1 className="text-3xl font-bold">Electra Admin</h1>
+          <h1 className="text-3xl font-bold">Sarathi Orders</h1>
           <p className="text-muted-foreground">Login to your account to continue</p>
         </div>
 

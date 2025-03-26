@@ -242,7 +242,7 @@ const DashboardLayout = React.memo(({ children }: { children: React.ReactNode })
         <div className="p-4">
           <div className="flex items-center justify-between">
             {!sidebarCollapsed ? (
-              <h2 className="text-xl font-bold">Electra</h2>
+              <h2 className="text-xl font-bold">Sarathi Orders</h2>
             ) : (
               <div className="w-full flex justify-center">
                 <h2 className="text-xl font-bold">E</h2>

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Loader2, Plus, Trash2, Upload, CalendarIcon } from 'lucide-react';
+import { Loader2, Plus, Trash2, Upload, CalendarIcon, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 
@@ -38,10 +38,13 @@ import { Badge } from '@/components/ui/badge';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { cn } from '@/lib/utils';
 
-import { OrderStatus, PaymentCondition, Product, OrderItem, User } from '@/lib/types';
-import { createOrder, fetchStaff, fetchProducts, updateProduct } from '@/lib/api';
+import { OrderStatus, PaymentCondition, Product, OrderItem, User, Order } from '@/lib/types';
+import { createOrder, fetchStaff, fetchProducts, updateProduct, updateOrder, updateOrderWithImage } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
+import { useNotifications } from '@/contexts/NotificationContext';
 
 // Order form schema
 const orderFormSchema = z.object({
@@ -58,22 +61,38 @@ type OrderFormValues = z.infer<typeof orderFormSchema>;
 
 interface OrderFormProps {
   onSuccess?: () => void;
+  initialOrder?: Order;
+  onCancel?: () => void;
 }
 
-export default function OrderForm({ onSuccess }: OrderFormProps) {
+export default function OrderForm({ onSuccess, initialOrder, onCancel }: OrderFormProps) {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { addNotification } = useNotifications();
   const [isLoading, setIsLoading] = useState(false);
   const [orderImage, setOrderImage] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(initialOrder?.orderImage || null);
   const [uploadingImage, setUploadingImage] = useState(false);
-  const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
+  const [orderItems, setOrderItems] = useState<OrderItem[]>(() => {
+    // Initialize order items immediately if initialOrder is provided
+    if (initialOrder?.orderItems && initialOrder.orderItems.length > 0) {
+      return initialOrder.orderItems.map(item => ({
+        id: item._id || item.id || Math.random().toString(36).substring(2, 9),
+        productId: item.productId,
+        productName: item.productName,
+        quantity: item.quantity,
+        price: item.price
+      }));
+    }
+    return [];
+  });
   const [selectedProduct, setSelectedProduct] = useState<string>('');
   const [quantity, setQuantity] = useState<number>(1);
   const [staffMembers, setStaffMembers] = useState<User[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [productsLoading, setProductsLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [productSearch, setProductSearch] = useState('');
+  const [showProductResults, setShowProductResults] = useState(false);
   
   // Fetch products from API
   useEffect(() => {
@@ -93,18 +112,24 @@ export default function OrderForm({ onSuccess }: OrderFormProps) {
     loadProducts();
   }, []);
   
-  // Filter available products
-  const availableProducts = React.useMemo(() => {
-    return (products || [])
-      .filter(product => product.stock > 0)
-      .filter(product => {
-        if (!searchTerm) return true;
+  // Filter products based on search term - similar to UpdateOrderForm
+  const filteredProducts = productSearch.trim() === ''
+    ? products
+    : products.filter(product => {
+        // Type assertion for products that might have 'sku' property
+        const productWithSku = product as (Product & { sku?: string });
         
-        const searchLower = searchTerm.toLowerCase();
-        const productName = (product.name || '').toLowerCase();
-        return productName.includes(searchLower);
+        return product.name.toLowerCase().includes(productSearch.toLowerCase()) ||
+          (productWithSku.sku && typeof productWithSku.sku === 'string' && productWithSku.sku.toLowerCase().includes(productSearch.toLowerCase())) ||
+          (product.category && product.category.toLowerCase().includes(productSearch.toLowerCase()));
       });
-  }, [products, searchTerm]);
+      
+  // Handle product selection from search results
+  const handleSelectProduct = (product: Product) => {
+    setSelectedProduct(product._id || product.id);
+    setProductSearch(product.name);
+    setShowProductResults(false);
+  };
   
   // Fetch staff members when component mounts
   useEffect(() => {
@@ -125,13 +150,13 @@ export default function OrderForm({ onSuccess }: OrderFormProps) {
   const form = useForm<OrderFormValues>({
     resolver: zodResolver(orderFormSchema),
     defaultValues: {
-      customerName: '',
-      customerPhone: '',
-      customerEmail: '',
-      status: 'pending',
-      paymentCondition: 'immediate',
-      assignedTo: 'all',
-      notes: '',
+      customerName: initialOrder?.customerName || '',
+      customerPhone: initialOrder?.customerPhone || '',
+      customerEmail: initialOrder?.customerEmail || '',
+      status: (initialOrder?.status as OrderStatus) || 'pending',
+      paymentCondition: (initialOrder?.paymentCondition as PaymentCondition) || 'immediate',
+      assignedTo: initialOrder?.assignedTo || 'all',
+      notes: initialOrder?.notes || '',
     },
   });
 
@@ -214,7 +239,7 @@ export default function OrderForm({ onSuccess }: OrderFormProps) {
       }));
       
       // Create the base order data
-      const orderData = {
+      const orderData: any = {
         customerName: values.customerName,
         customerPhone: values.customerPhone,
         customerEmail: values.customerEmail || undefined, // Make email optional
@@ -224,36 +249,78 @@ export default function OrderForm({ onSuccess }: OrderFormProps) {
         notes: values.notes || '',
         items: sanitizedItems,
         total: calculateTotal(),
-        isPaid: false,
-        createdBy: user?._id || user?.id || '1',
+        isPaid: initialOrder?.isPaid || false,
       };
+
+      // Add createdBy only if we're creating a new order
+      if (!initialOrder) {
+        orderData.createdBy = user?._id || user?.id || '1';
+      }
 
       // Create a new object with the dispatchDate if needed
       const finalOrderData = dispatchDate 
-        ? { ...orderData, dispatchDate } 
+        ? { ...orderData, dispatchDate: dispatchDate.toISOString() } // Convert Date to string
         : orderData;
       
-      console.log('Preparing to create order with data:', finalOrderData);
+      console.log(`Preparing to ${initialOrder ? 'update' : 'create'} order with data:`, finalOrderData);
       
-      // Create form data
-      const formData = new FormData();
+      let createdOrUpdatedOrder;
       
-      // Add order data - ensure it's a string
-      formData.append('orderData', JSON.stringify(finalOrderData));
-      
-      // Add image if exists
-      if (orderImage) {
-        console.log('Adding image to order:', orderImage.name, orderImage.type, orderImage.size);
-        setUploadingImage(true);
-        formData.append('orderImage', orderImage);
+      // Check if we're updating an existing order or creating a new one
+      if (initialOrder) {
+        // Update existing order
+        if (orderImage) {
+          // If we have a new image, use FormData
+          const formData = new FormData();
+          formData.append('orderData', JSON.stringify(finalOrderData));
+          formData.append('orderImage', orderImage);
+          
+          createdOrUpdatedOrder = await updateOrderWithImage(initialOrder._id, formData);
+        } else {
+          // Update without changing the image
+          createdOrUpdatedOrder = await updateOrder(initialOrder._id, finalOrderData);
+        }
+        
+        toast.success('Order updated successfully');
+        
+        // Add notification for order update
+        addNotification({
+          type: 'order',
+          title: 'Order Updated',
+          message: `Order #${createdOrUpdatedOrder.orderNumber || (createdOrUpdatedOrder._id ? createdOrUpdatedOrder._id.substring(0, 8) : '')} has been updated`,
+          actionUrl: '/orders'
+        });
+      } else {
+        // Create new order
+        // Create form data
+        const formData = new FormData();
+        
+        // Add order data - ensure it's a string
+        formData.append('orderData', JSON.stringify(finalOrderData));
+        
+        // Add image if exists
+        if (orderImage) {
+          console.log('Adding image to order:', orderImage.name, orderImage.type, orderImage.size);
+          setUploadingImage(true);
+          formData.append('orderImage', orderImage);
+        }
+        
+        createdOrUpdatedOrder = await createOrder(formData);
+        console.log('Order created successfully:', createdOrUpdatedOrder);
+        
+        // Add notification for order creation
+        addNotification({
+          type: 'order',
+          title: 'New Order Created',
+          message: `Order #${createdOrUpdatedOrder.orderNumber || (createdOrUpdatedOrder._id ? createdOrUpdatedOrder._id.substring(0, 8) : '')} has been created successfully`,
+          actionUrl: '/orders'
+        });
+        
+        toast.success('Order created successfully');
       }
       
-      try {
-        // Create order
-        const createdOrder = await createOrder(formData);
-        console.log('Order created successfully:', createdOrder);
-        
-        // Update product stock
+      // Update product stock (only for new orders)
+      if (!initialOrder) {
         for (const item of orderItems) {
           try {
             const product = products.find(p => (p._id === item.productId) || (p.id === item.productId));
@@ -266,24 +333,16 @@ export default function OrderForm({ onSuccess }: OrderFormProps) {
             // Continue with next product even if one fails
           }
         }
-        
-        toast.success('Order created successfully');
-        
-        if (onSuccess) {
-          onSuccess();
-        } else {
-          navigate('/orders');
-        }
-      } catch (apiError: any) {
-        console.error('API error creating order:', apiError);
-        
-        // Show a more specific error message if available
-        const errorMessage = apiError.message || 'Failed to create order';
-        toast.error(errorMessage);
+      }
+      
+      if (onSuccess) {
+        onSuccess();
+      } else {
+        navigate('/orders');
       }
     } catch (error: any) {
-      console.error('Error in order submission process:', error);
-      toast.error(`Error creating order: ${error.message || 'Unknown error'}`);
+      console.error(`Error ${initialOrder ? 'updating' : 'creating'} order:`, error);
+      toast.error(`Error ${initialOrder ? 'updating' : 'creating'} order: ${error.message || 'Unknown error'}`);
     } finally {
       setIsLoading(false);
       setUploadingImage(false);
@@ -292,6 +351,11 @@ export default function OrderForm({ onSuccess }: OrderFormProps) {
 
   // Handle navigation back to orders page
   const handleCancel = () => {
+    if (onCancel) {
+      onCancel();
+      return;
+    }
+    
     try {
       // First attempt with React Router navigation
       navigate('/orders');
@@ -315,8 +379,10 @@ export default function OrderForm({ onSuccess }: OrderFormProps) {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold">Create New Order</h2>
-          <p className="text-muted-foreground">Add a new customer order to the system</p>
+          <h2 className="text-2xl font-bold">{initialOrder ? 'Update Order' : 'Create New Order'}</h2>
+          <p className="text-muted-foreground">
+            {initialOrder ? 'Edit the existing order details' : 'Add a new customer order to the system'}
+          </p>
         </div>
         <Button
           variant="outline"
@@ -560,80 +626,93 @@ export default function OrderForm({ onSuccess }: OrderFormProps) {
               <div className="space-y-4">
                 <h3 className="text-lg font-medium">Order Items</h3>
                 
-                <div className="flex flex-col space-y-2">
-                  <div className="grid grid-cols-3 gap-2">
-                    <div className="col-span-2">
-                      <Select
-                        value={selectedProduct}
-                        onValueChange={setSelectedProduct}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select product" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {productsLoading ? (
-                            <div className="flex items-center justify-center py-2">
-                              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                              <span>Loading products...</span>
-                            </div>
-                          ) : (
-                            <>
-                              <div className="px-2 py-1.5">
-                                <Input
-                                  placeholder="Search products..."
-                                  className="h-8 w-full"
-                                  value={searchTerm}
-                                  onChange={(e) => setSearchTerm(e.target.value)}
-                                  onClick={(e) => e.stopPropagation()}
-                                  onKeyDown={(e) => {
-                                    // Prevent select from closing on keydown
-                                    if (e.key !== 'Enter' && e.key !== 'Escape') {
-                                      e.stopPropagation();
-                                    }
-                                  }}
-                                />
-                              </div>
-                              {availableProducts.length > 0 ? (
-                                availableProducts.map((product) => (
-                                  <SelectItem 
-                                    key={product._id || product.id}
-                                    value={String(product._id || product.id || '')}
-                                    disabled={(product.stock === undefined || product.stock <= 0)}
-                                  >
-                                    {product.name || 'Unnamed Product'} - ₹{(product.price || 0).toFixed(2)} - Stock: {product.stock || 0}
-                                  </SelectItem>
-                                ))
-                              ) : (
-                                <div className="text-center py-2 text-muted-foreground">
-                                  No products found
-                                </div>
-                              )}
-                            </>
-                          )}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
+                <div className="space-y-2">
+                  <div className="relative">
+                    <div className="flex items-center border rounded-md">
+                      <div className="relative flex-1">
+                        <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                          placeholder="Search products by name, category, or SKU..."
+                          className="pl-8 border-0 focus-visible:ring-0"
+                          value={productSearch}
+                          onChange={(e) => {
+                            setProductSearch(e.target.value);
+                            setShowProductResults(true);
+                          }}
+                          onFocus={() => setShowProductResults(true)}
+                        />
+                      </div>
                       <Input
                         type="number"
                         min="1"
                         value={quantity}
                         onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
                         placeholder="Qty"
+                        className="w-20 h-10 border-0 focus-visible:ring-0 border-l rounded-none"
                       />
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="rounded-l-none"
+                        onClick={handleAddItem}
+                        disabled={!selectedProduct}
+                      >
+                        Add
+                      </Button>
                     </div>
+                    
+                    {/* Search results */}
+                    {showProductResults && productSearch && (
+                      <div className="absolute w-full z-10 mt-1 border rounded-md bg-background shadow-lg">
+                        <ScrollArea className="h-60">
+                          {productsLoading ? (
+                            <div className="p-4 text-center">
+                              <Loader2 className="h-5 w-5 mx-auto animate-spin text-muted-foreground" />
+                              <p className="text-sm text-muted-foreground mt-2">Loading products...</p>
+                            </div>
+                          ) : filteredProducts.length === 0 ? (
+                            <div className="p-4 text-center text-muted-foreground">
+                              No products found
+                            </div>
+                          ) : (
+                            <div>
+                              {filteredProducts.map((product) => {
+                                // Type assertion for product in the UI
+                                const productWithSku = product as (Product & { sku?: string });
+                                
+                                return (
+                                  <div
+                                    key={product._id || product.id}
+                                    className={cn(
+                                      "flex items-center justify-between p-3 cursor-pointer hover:bg-muted transition-colors",
+                                      product.stock <= 0 && "opacity-50"
+                                    )}
+                                    onClick={() => product.stock > 0 && handleSelectProduct(product)}
+                                  >
+                                    <div>
+                                      <div className="font-medium">{product.name}</div>
+                                      <div className="text-sm text-muted-foreground">
+                                        {product.category} {productWithSku.sku && `• SKU: ${productWithSku.sku}`}
+                                      </div>
+                                    </div>
+                                    <div className="text-right">
+                                      <div>₹{product.price.toFixed(2)}</div>
+                                      <div className={cn(
+                                        "text-xs",
+                                        product.stock <= 5 ? "text-destructive" : "text-muted-foreground"
+                                      )}>
+                                        Stock: {product.stock}
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </ScrollArea>
+                      </div>
+                    )}
                   </div>
-                  
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full"
-                    onClick={handleAddItem}
-                    disabled={!selectedProduct}
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Item
-                  </Button>
                 </div>
                 
                 {orderItems.length > 0 ? (
@@ -694,7 +773,9 @@ export default function OrderForm({ onSuccess }: OrderFormProps) {
               disabled={isLoading || uploadingImage}
             >
               {(isLoading || uploadingImage) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {uploadingImage ? 'Uploading Image...' : isLoading ? 'Creating Order...' : 'Create Order'}
+              {uploadingImage ? 'Uploading Image...' : 
+               isLoading ? (initialOrder ? 'Updating Order...' : 'Creating Order...') : 
+               (initialOrder ? 'Update Order' : 'Create Order')}
             </Button>
           </div>
         </form>

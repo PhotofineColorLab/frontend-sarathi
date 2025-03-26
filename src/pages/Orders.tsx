@@ -11,7 +11,6 @@ import { DeleteOrderDialog } from '@/components/orders/DeleteOrderDialog';
 import { MarkPaidDialog } from '@/components/orders/MarkPaidDialog';
 import { Order, OrderStatus } from '@/lib/types';
 import OrderForm from '@/components/forms/OrderForm';
-import UpdateOrderForm from '@/components/forms/UpdateOrderForm';
 import { PaginationWrapper } from '@/components/ui/pagination-wrapper';
 import { fetchOrders, fetchOrdersByDateRange, fetchOrdersByAssignedTo, deleteOrder, updateOrder, markOrderAsPaid } from '@/lib/api';
 import { isAfter, isBefore, isEqual, startOfDay, format } from 'date-fns';
@@ -284,8 +283,8 @@ export default function Orders() {
   if (isUpdateMode && selectedOrder) {
     return (
       <DashboardLayout>
-        <UpdateOrderForm 
-          order={selectedOrder}
+        <OrderForm 
+          initialOrder={selectedOrder}
           onSuccess={() => {
             setIsUpdateMode(false);
             setSelectedOrder(null);
