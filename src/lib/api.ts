@@ -14,23 +14,18 @@ export const loginStaff = async (email: string, password: string) => {
       body: JSON.stringify({ email, password }),
     });
 
-    // First check if response is ok
     if (!response.ok) {
-      // Try to parse error message if possible
       const contentType = response.headers.get('content-type');
       if (contentType && contentType.includes('application/json')) {
         const errorData = await response.json();
         throw new Error(errorData.message || 'Login failed');
       } else {
-        // If not JSON, use status text
         throw new Error(`Login failed: ${response.status} ${response.statusText}`);
       }
     }
 
-    // Parse response data
     const data = await response.json();
     
-    // Store token in localStorage
     if (data && data.token) {
       localStorage.setItem('token', data.token);
       return data;
@@ -90,6 +85,7 @@ export const fetchStaff = async () => {
 export const createStaff = async (staffData: Omit<User, 'id' | 'createdAt'>) => {
   const token = localStorage.getItem('token');
   console.log('Creating staff with data:', staffData);
+  console.log('Authorization token present:', !!token);
   
   try {
     const response = await fetch(`${API_URL}/staff`, {
@@ -101,15 +97,53 @@ export const createStaff = async (staffData: Omit<User, 'id' | 'createdAt'>) => 
       body: JSON.stringify(staffData),
     });
 
+    const responseData = await response.json();
+    console.log('Create staff response:', {
+      status: response.status,
+      statusText: response.statusText,
+      data: responseData,
+      headers: Object.fromEntries(response.headers.entries())
+    });
+
     if (!response.ok) {
-      const errorData = await response.json();
-      console.error('Create staff error response:', errorData);
-      throw new Error(errorData.message || 'Failed to create staff member');
+      console.error('Create staff error response:', {
+        status: response.status,
+        statusText: response.statusText,
+        data: responseData,
+        headers: Object.fromEntries(response.headers.entries())
+      });
+      
+      // Handle specific error cases
+      if (response.status === 403) {
+        throw new Error('You do not have permission to create staff members');
+      }
+      
+      if (responseData.message === 'Missing required fields') {
+        throw new Error(`Missing required fields: ${Object.entries(responseData.details)
+          .filter(([_, present]) => !present)
+          .map(([field]) => field)
+          .join(', ')}`);
+      }
+      
+      if (responseData.message === 'Invalid role specified') {
+        throw new Error(`Invalid role: ${responseData.receivedRole}. Valid roles are: ${responseData.validRoles.join(', ')}`);
+      }
+      
+      if (responseData.message === 'Validation error') {
+        const validationErrors = Object.entries(responseData.details)
+          .map(([field, error]: [string, any]) => `${field}: ${error.message}`)
+          .join(', ');
+        throw new Error(`Validation error: ${validationErrors}`);
+      }
+      
+      if (responseData.message === 'Duplicate key error') {
+        throw new Error(`A staff member with this ${responseData.field} already exists`);
+      }
+      
+      throw new Error(responseData.message || responseData.error || 'Failed to create staff member');
     }
 
-    const data = await response.json();
-    console.log('Create staff response:', data);
-    return data;
+    return responseData;
   } catch (error) {
     console.error('Create staff error:', error);
     throw error;

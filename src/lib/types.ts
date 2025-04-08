@@ -1,5 +1,5 @@
 // User Types
-export type UserRole = 'admin' | 'staff';
+export type UserRole = 'admin' | 'staff' | 'executive';
 
 export interface User {
   id: string;
@@ -10,7 +10,12 @@ export interface User {
   avatar?: string;
   phone?: string;
   password?: string; // Add password field for staff login
-  createdAt: Date;
+  createdAt?: string;
+  attendance?: {
+    date: string;
+    isPresent: boolean;
+    remarks?: string;
+  }[];
 }
 
 export interface Staff extends User {

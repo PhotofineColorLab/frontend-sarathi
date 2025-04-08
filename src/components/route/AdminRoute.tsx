@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -7,10 +6,10 @@ interface AdminRouteProps {
   children: React.ReactNode;
 }
 
-const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
-  const { isAuthenticated, isLoading, isAdmin } = useAuth();
+const AdminRoute = ({ children }: AdminRouteProps) => {
+  const { isAuthenticated, isAdmin, isExecutive, loading } = useAuth();
 
-  if (isLoading) {
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted">
         <div className="glass-panel rounded-lg p-8 flex flex-col items-center animate-pulse">
@@ -20,12 +19,12 @@ const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
       </div>
     );
   }
-  
+
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
-  
-  if (!isAdmin) {
+
+  if (!isAdmin && !isExecutive) {
     return <Navigate to="/dashboard" replace />;
   }
 

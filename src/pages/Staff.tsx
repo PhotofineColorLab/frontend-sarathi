@@ -73,6 +73,9 @@ export default function Staff() {
   const [selectedStaff, setSelectedStaff] = useState<UserType | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isStaffFormOpen, setIsStaffFormOpen] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   
@@ -162,10 +165,17 @@ export default function Staff() {
 
   const handleSubmitStaff = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+    setIsSubmitting(true);
+    setError(null);
+
     try {
+      // Validate role
+      if (!['admin', 'staff', 'executive'].includes(staffRole)) {
+        throw new Error(`Invalid role selected. Please choose a valid role from the dropdown.`);
+      }
+
       if (isEditing && selectedStaff) {
-        console.log('Updating staff with ID:', selectedStaff._id || selectedStaff.id); // Debug log
+        console.log('Updating staff with ID:', selectedStaff._id || selectedStaff.id);
         // Update existing staff
         const updates: Partial<UserType> = {
           name: staffName,
@@ -216,8 +226,22 @@ export default function Staff() {
       setIsStaffFormOpen(false);
       resetForm();
     } catch (error) {
-      console.error('Error in handleSubmitStaff:', error);
-      toast.error('Failed to save staff member');
+      console.error('Error submitting staff:', error);
+      if (error instanceof Error) {
+        if (error.message.includes('Invalid role')) {
+          setError('Please select a valid role from the dropdown menu');
+        } else if (error.message.includes('Duplicate')) {
+          setError('A staff member with this email already exists');
+        } else if (error.message.includes('permission')) {
+          setError('You do not have permission to perform this action');
+        } else {
+          setError(error.message);
+        }
+      } else {
+        setError('An unexpected error occurred');
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -347,6 +371,13 @@ export default function Staff() {
     }
   };
 
+  // Update the role options in the form
+  const roleOptions = [
+    { value: 'staff', label: 'Staff Member' },
+    { value: 'executive', label: 'Executive' },
+    { value: 'admin', label: 'Administrator' },
+  ];
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -446,8 +477,20 @@ export default function Staff() {
                     <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
                       <div>
                         <p className="text-muted-foreground">Role</p>
-                        <Badge variant="outline" className="mt-1 capitalize">
-                          {member.role}
+                        <Badge 
+                          variant={
+                            member.role === 'admin' 
+                              ? 'default' 
+                              : member.role === 'executive'
+                                ? 'secondary'
+                                : 'outline'
+                          }
+                        >
+                          {member.role === 'admin' 
+                            ? 'Administrator' 
+                            : member.role === 'executive'
+                              ? 'Executive'
+                              : 'Staff Member'}
                         </Badge>
                       </div>
                       <div>
@@ -488,9 +531,21 @@ export default function Staff() {
                         </div>
                       </TableCell>
                       <TableCell>
-                          <Badge variant="outline" className="capitalize">
-                            {member.role}
-                        </Badge>
+                          <Badge 
+                            variant={
+                              member.role === 'admin' 
+                                ? 'default' 
+                                : member.role === 'executive'
+                                  ? 'secondary'
+                                  : 'outline'
+                            }
+                          >
+                            {member.role === 'admin' 
+                              ? 'Administrator' 
+                              : member.role === 'executive'
+                                ? 'Executive'
+                                : 'Staff Member'}
+                          </Badge>
                       </TableCell>
                       <TableCell>{member.email}</TableCell>
                         <TableCell>{member.phone || 'N/A'}</TableCell>
@@ -764,8 +819,11 @@ export default function Staff() {
                   <SelectValue placeholder="Select role" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="staff">Staff Member</SelectItem>
-                  <SelectItem value="admin">Administrator</SelectItem>
+                  {roleOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
