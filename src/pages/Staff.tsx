@@ -140,6 +140,7 @@ export default function Staff() {
       setStaffPhone(staff.phone || '');
       setStaffPassword(''); // Reset password field when editing
       setIsEditing(true);
+      console.log('Opening edit form for staff:', staff); // Debug log
     } else {
       resetForm();
     }
@@ -148,12 +149,13 @@ export default function Staff() {
 
   const handleDeleteStaff = async (staffId: string) => {
     try {
+      console.log('Deleting staff with ID:', staffId);
       await deleteStaff(staffId);
-      setStaff(staff.filter(s => s.id !== staffId));
+      setStaff(staff.filter(s => s._id !== staffId && s.id !== staffId));
       setIsDeleteDialogOpen(false);
       toast.success('Staff member deleted successfully');
     } catch (error) {
-      console.error(error);
+      console.error('Error in handleDeleteStaff:', error);
       toast.error('Failed to delete staff member');
     }
   };
@@ -163,6 +165,7 @@ export default function Staff() {
     
     try {
       if (isEditing && selectedStaff) {
+        console.log('Updating staff with ID:', selectedStaff._id || selectedStaff.id); // Debug log
         // Update existing staff
         const updates: Partial<UserType> = {
           name: staffName,
@@ -176,8 +179,13 @@ export default function Staff() {
           updates.password = staffPassword;
         }
         
-        const updatedStaff = await updateStaff(selectedStaff.id, updates);
-        setStaff(staff.map(s => s.id === selectedStaff.id ? updatedStaff : s));
+        const staffId = selectedStaff._id || selectedStaff.id;
+        if (!staffId) {
+          throw new Error('Staff ID is required for updating');
+        }
+        
+        const updatedStaff = await updateStaff(staffId, updates);
+        setStaff(staff.map(s => (s._id === staffId || s.id === staffId) ? updatedStaff : s));
         toast.success('Staff member updated successfully');
       } else {
         // Add new staff with required password
@@ -194,6 +202,13 @@ export default function Staff() {
           password: staffPassword,
         });
         
+        console.log('New staff created:', newStaff);
+        
+        // Ensure the new staff has id property for client-side operations
+        if (newStaff._id && !newStaff.id) {
+          newStaff.id = newStaff._id;
+        }
+        
         setStaff([newStaff, ...staff]);
         toast.success('Staff member added successfully');
       }
@@ -201,7 +216,7 @@ export default function Staff() {
       setIsStaffFormOpen(false);
       resetForm();
     } catch (error) {
-      console.error(error);
+      console.error('Error in handleSubmitStaff:', error);
       toast.error('Failed to save staff member');
     }
   };
@@ -816,7 +831,7 @@ export default function Staff() {
             </Button>
             <Button
               variant="destructive"
-              onClick={() => selectedStaff && handleDeleteStaff(selectedStaff.id)}
+              onClick={() => selectedStaff && handleDeleteStaff(selectedStaff._id || selectedStaff.id)}
             >
               Delete
             </Button>

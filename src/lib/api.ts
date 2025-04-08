@@ -50,72 +50,123 @@ export const logoutStaff = () => {
 // Staff management functions
 export const fetchStaff = async () => {
   const token = localStorage.getItem('token');
-  const response = await fetch(`${API_URL}/staff`, {
-    headers: {
-      'Authorization': `Bearer ${token}`,
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error('Failed to fetch staff members');
+  
+  if (!token) {
+    throw new Error('No authentication token found');
   }
+  
+  try {
+    console.log('Fetching staff members...');
+    const response = await fetch(`${API_URL}/staff`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
 
-  return response.json();
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('Fetch staff error response:', errorData);
+      throw new Error(errorData.message || 'Failed to fetch staff members');
+    }
+
+    const data = await response.json();
+    console.log(`Retrieved ${data.length} staff members`);
+    
+    // Ensure each staff member has an id property for client-side operations
+    const normalizedStaff = data.map((staff: any) => {
+      if (staff._id && !staff.id) {
+        staff.id = staff._id;
+      }
+      return staff;
+    });
+    
+    return normalizedStaff;
+  } catch (error) {
+    console.error('Fetch staff error:', error);
+    throw error;
+  }
 };
 
 export const createStaff = async (staffData: Omit<User, 'id' | 'createdAt'>) => {
   const token = localStorage.getItem('token');
-  const response = await fetch(`${API_URL}/staff`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-    },
-    body: JSON.stringify(staffData),
-  });
+  console.log('Creating staff with data:', staffData);
+  
+  try {
+    const response = await fetch(`${API_URL}/staff`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify(staffData),
+    });
 
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || 'Failed to create staff member');
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('Create staff error response:', errorData);
+      throw new Error(errorData.message || 'Failed to create staff member');
+    }
+
+    const data = await response.json();
+    console.log('Create staff response:', data);
+    return data;
+  } catch (error) {
+    console.error('Create staff error:', error);
+    throw error;
   }
-
-  return response.json();
 };
 
 export const updateStaff = async (id: string, staffData: Partial<User>) => {
   const token = localStorage.getItem('token');
-  const response = await fetch(`${API_URL}/staff/${id}`, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-    },
-    body: JSON.stringify(staffData),
-  });
+  console.log('Updating staff with ID:', id);
+  console.log('Update data:', staffData);
+  
+  try {
+    const response = await fetch(`${API_URL}/staff/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify(staffData),
+    });
 
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || 'Failed to update staff member');
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('Update staff error response:', errorData);
+      throw new Error(errorData.message || 'Failed to update staff member');
+    }
+
+    return response.json();
+  } catch (error) {
+    console.error('Update staff error:', error);
+    throw error;
   }
-
-  return response.json();
 };
 
 export const deleteStaff = async (id: string) => {
   const token = localStorage.getItem('token');
-  const response = await fetch(`${API_URL}/staff/${id}`, {
-    method: 'DELETE',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-    },
-  });
+  console.log('Deleting staff with ID:', id);
+  
+  try {
+    const response = await fetch(`${API_URL}/staff/${id}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
 
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || 'Failed to delete staff member');
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('Delete staff error response:', errorData);
+      throw new Error(errorData.message || 'Failed to delete staff member');
+    }
+
+    return response.json();
+  } catch (error) {
+    console.error('Delete staff error:', error);
+    throw error;
   }
-
-  return response.json();
 };
 
 // Product functions
