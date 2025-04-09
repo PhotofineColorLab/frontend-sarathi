@@ -59,6 +59,7 @@ export interface Product {
 export type OrderStatus = 'pending' | 'dc' | 'invoice' | 'dispatched';
 export type PaymentCondition = 'immediate' | 'days15' | 'days30';
 export type PaymentStatus = 'paid' | 'unpaid' | 'partial';
+export type OrderPriority = 'high' | 'medium' | 'low';
 
 export interface OrderItem {
   id?: string;
@@ -81,6 +82,7 @@ export interface Order {
   status: OrderStatus;
   paymentStatus: PaymentStatus;
   paymentCondition?: PaymentCondition;
+  priority?: OrderPriority;
   total: number;
   notes?: string;
   createdAt: string;

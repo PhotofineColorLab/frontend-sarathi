@@ -41,7 +41,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 
-import { OrderStatus, PaymentCondition, Product, OrderItem, User, Order } from '@/lib/types';
+import { OrderStatus, PaymentCondition, Product, OrderItem, User, Order, OrderPriority } from '@/lib/types';
 import { createOrder, fetchStaff, fetchProducts, updateProduct, updateOrder, updateOrderWithImage } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotifications } from '@/contexts/NotificationContext';
@@ -53,6 +53,7 @@ const orderFormSchema = z.object({
   customerEmail: z.string().email({ message: 'Invalid email address' }).optional().or(z.literal('')),
   status: z.enum(['pending', 'dc', 'invoice', 'dispatched']),
   paymentCondition: z.enum(['immediate', 'days15', 'days30']),
+  priority: z.enum(['high', 'medium', 'low']),
   assignedTo: z.string().optional(),
   notes: z.string().optional(),
 });
@@ -155,6 +156,7 @@ export default function OrderForm({ onSuccess, initialOrder, onCancel }: OrderFo
       customerEmail: initialOrder?.customerEmail || '',
       status: (initialOrder?.status as OrderStatus) || 'pending',
       paymentCondition: (initialOrder?.paymentCondition as PaymentCondition) || 'immediate',
+      priority: (initialOrder?.priority as OrderPriority) || 'medium',
       assignedTo: initialOrder?.assignedTo || 'all',
       notes: initialOrder?.notes || '',
     },
@@ -245,6 +247,7 @@ export default function OrderForm({ onSuccess, initialOrder, onCancel }: OrderFo
         customerEmail: values.customerEmail || undefined, // Make email optional
         status: values.status,
         paymentCondition: values.paymentCondition,
+        priority: values.priority,
         assignedTo: values.assignedTo === 'all' ? null : values.assignedTo,
         notes: values.notes || '',
         items: sanitizedItems,
@@ -507,6 +510,49 @@ export default function OrderForm({ onSuccess, initialOrder, onCancel }: OrderFo
                             </FormControl>
                             <FormLabel className="font-normal">
                               30 Days
+                            </FormLabel>
+                          </FormItem>
+                        </RadioGroup>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="priority"
+                  render={({ field }) => (
+                    <FormItem className="space-y-3">
+                      <FormLabel>Order Priority</FormLabel>
+                      <FormControl>
+                        <RadioGroup
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                          className="flex space-x-4"
+                        >
+                          <FormItem className="flex items-center space-x-2 space-y-0">
+                            <FormControl>
+                              <RadioGroupItem value="high" />
+                            </FormControl>
+                            <FormLabel className="font-normal">
+                              High
+                            </FormLabel>
+                          </FormItem>
+                          <FormItem className="flex items-center space-x-2 space-y-0">
+                            <FormControl>
+                              <RadioGroupItem value="medium" />
+                            </FormControl>
+                            <FormLabel className="font-normal">
+                              Medium
+                            </FormLabel>
+                          </FormItem>
+                          <FormItem className="flex items-center space-x-2 space-y-0">
+                            <FormControl>
+                              <RadioGroupItem value="low" />
+                            </FormControl>
+                            <FormLabel className="font-normal">
+                              Low
                             </FormLabel>
                           </FormItem>
                         </RadioGroup>

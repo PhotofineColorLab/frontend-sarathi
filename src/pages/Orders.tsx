@@ -22,6 +22,7 @@ import { PaymentStatusBadge } from '@/components/orders/PaymentStatusBadge';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft } from 'lucide-react';
 import { useNotifications } from '@/contexts/NotificationContext';
+import { Badge } from '@/components/ui/badge';
 
 export default function Orders() {
   const navigate = useNavigate();
@@ -277,6 +278,19 @@ export default function Orders() {
           <div className="flex items-center gap-2">
             <OrderStatusBadge order={order} />
             <PaymentStatusBadge order={order} />
+            {order.priority && (
+              <Badge
+                className={cn(
+                  "text-xs py-0 h-5",
+                  order.priority === 'high' ? "bg-red-100 text-red-800 hover:bg-red-100" :
+                  order.priority === 'medium' ? "bg-yellow-100 text-yellow-800 hover:bg-yellow-100" :
+                  "bg-green-100 text-green-800 hover:bg-green-100"
+                )}
+              >
+                {order.priority === 'high' ? "High" : 
+                 order.priority === 'medium' ? "Medium" : "Low"}
+              </Badge>
+            )}
           </div>
         </div>
       </div>

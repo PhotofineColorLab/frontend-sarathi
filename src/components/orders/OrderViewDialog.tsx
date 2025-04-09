@@ -90,6 +90,19 @@ export function OrderViewDialog({
         return 'Not specified';
     }
   };
+
+  const getPriorityText = (priority?: string) => {
+    switch (priority) {
+      case 'high':
+        return 'High';
+      case 'medium':
+        return 'Medium';
+      case 'low':
+        return 'Low';
+      default:
+        return 'Medium';
+    }
+  };
   
   // Get assigned staff name
   const getAssignedStaffName = () => {
@@ -103,7 +116,7 @@ export function OrderViewDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Order Details</DialogTitle>
           <DialogDescription>
@@ -111,7 +124,7 @@ export function OrderViewDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 mt-4">
+        <div className="space-y-6 mt-4">
           {order.orderImage && (
             <div className="w-full">
               <p className="text-sm font-medium mb-2">Order Image</p>
@@ -128,7 +141,7 @@ export function OrderViewDialog({
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <p className="text-sm font-medium">Order ID</p>
               <p className="text-sm text-muted-foreground">{getDisplayOrderId(order)}</p>
@@ -145,7 +158,7 @@ export function OrderViewDialog({
             </div>
             <div>
               <p className="text-sm font-medium">Status</p>
-              <p className="text-sm mt-1 flex items-center">
+              <p className="text-sm mt-1 flex items-center gap-2">
                 <OrderStatusBadge order={order} />
                 <PaymentStatusBadge 
                   order={order} 
@@ -160,6 +173,12 @@ export function OrderViewDialog({
               <p className="text-sm font-medium">Payment Condition</p>
               <p className="text-sm text-muted-foreground">
                 {getPaymentConditionText(order.paymentCondition)}
+              </p>
+            </div>
+            <div>
+              <p className="text-sm font-medium">Priority</p>
+              <p className="text-sm text-muted-foreground">
+                {getPriorityText(order.priority)}
               </p>
             </div>
             <div>
@@ -200,20 +219,20 @@ export function OrderViewDialog({
 
           <div className="mt-6">
             <p className="text-sm font-medium mb-2">Items</p>
-            <div className="border rounded-md">
+            <div className="border rounded-md overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Item</TableHead>
-                    <TableHead className="text-right">Qty</TableHead>
-                    <TableHead className="text-right">Price</TableHead>
-                    <TableHead className="text-right">Total</TableHead>
+                    <TableHead className="min-w-[200px]">Item</TableHead>
+                    <TableHead className="text-right w-[100px]">Qty</TableHead>
+                    <TableHead className="text-right w-[120px]">Price</TableHead>
+                    <TableHead className="text-right w-[120px]">Total</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {(order.orderItems || order.items || []).map((item, index) => (
                     <TableRow key={item._id || item.id || index}>
-                      <TableCell>{item.productName}</TableCell>
+                      <TableCell className="max-w-[300px] truncate">{item.productName}</TableCell>
                       <TableCell className="text-right">{item.quantity}</TableCell>
                       <TableCell className="text-right">{formatCurrency(item.price)}</TableCell>
                       <TableCell className="text-right">
@@ -230,56 +249,29 @@ export function OrderViewDialog({
             <p className="text-sm font-medium">Total</p>
             <p className="text-lg font-semibold">{formatCurrency(order.total)}</p>
           </div>
-
-          {order.notes && (
-            <div className="pt-4 border-t">
-              <p className="text-sm font-medium mb-1">Notes</p>
-              <p className="text-sm text-muted-foreground">{order.notes}</p>
-            </div>
-          )}
         </div>
 
-        <DialogFooter className="flex items-center justify-between">
-          <div className="flex space-x-2">
-            <Select
-              defaultValue={order.status}
-              onValueChange={(value) => {
-                onStatusChange(getOrderId(order), value as OrderStatus);
-              }}
+        <DialogFooter className="mt-6">
+          <div className="flex flex-col sm:flex-row gap-2 w-full">
+            <Button
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              className="w-full sm:w-auto"
             >
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Change status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="dc">DC Generated</SelectItem>
-                <SelectItem value="invoice">Invoice Generated</SelectItem>
-                <SelectItem value="dispatched">Dispatched</SelectItem>
-              </SelectContent>
-            </Select>
-            
-            {order.status === 'dispatched' && order.isPaid === false && onMarkPaid && (
-              <Button onClick={() => {
-                onMarkPaid(getOrderId(order));
-                onOpenChange(false);
-              }}>
-                Mark as Paid
-              </Button>
-            )}
-            
+              Close
+            </Button>
             {onEditOrder && (
-              <Button 
-                variant="outline"
+              <Button
                 onClick={() => {
                   onEditOrder(order);
                   onOpenChange(false);
                 }}
+                className="w-full sm:w-auto"
               >
                 Edit Order
               </Button>
             )}
           </div>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

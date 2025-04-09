@@ -22,6 +22,7 @@ import { OrderStatusBadge } from './OrderStatusBadge';
 import { PaymentStatusBadge } from './PaymentStatusBadge';
 import { Order, OrderStatus } from '@/lib/types';
 import { useAuth } from '@/contexts/AuthContext';
+import { cn } from '@/lib/utils';
 
 interface OrdersTableProps {
   orders: Order[];
@@ -55,7 +56,7 @@ export function OrdersTable({
       return `#${(order._id || order.id || '').substring(0, 8)}`;
     }
   };
-  
+
   return (
     <div className="rounded-md border-0">
       <Table>
@@ -71,7 +72,10 @@ export function OrdersTable({
         </TableHeader>
         <TableBody>
           {orders.map((order) => (
-            <TableRow key={getOrderId(order)} className="transition-all hover:bg-muted/50">
+            <TableRow 
+              key={getOrderId(order)} 
+              className="transition-all hover:bg-muted/50"
+            >
               <TableCell className="font-medium">{getDisplayOrderId(order)}</TableCell>
               <TableCell>
                 <button 
@@ -121,9 +125,10 @@ export function OrdersTable({
                             Edit Order
                           </DropdownMenuItem>
                           
-                          {order.status === 'dispatched' && !order.isPaid && (
+                          {(isAdmin || (order.status === 'dispatched' && !order.isPaid)) && (
                             <DropdownMenuItem 
                               onClick={() => onMarkPaid(order)}
+                              disabled={order.isPaid}
                             >
                               Mark as Paid
                             </DropdownMenuItem>
