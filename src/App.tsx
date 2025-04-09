@@ -11,7 +11,6 @@ import Orders from "@/pages/Orders";
 import Products from "@/pages/Products";
 import Staff from "@/pages/Staff";
 import Analytics from "@/pages/Analytics";
-import Settings from "@/pages/Settings";
 import Login from "@/pages/Login";
 import NotFound from "@/pages/NotFound";
 import { NotificationProvider } from '@/contexts/NotificationContext';
@@ -58,12 +57,6 @@ const App = () => (
                 <AdminRoute>
                   <Analytics />
                 </AdminRoute>
-              } />
-              
-              <Route path="/settings" element={
-                <PrivateRoute>
-                  <Settings />
-                </PrivateRoute>
               } />
               
               <Route path="*" element={<NotFound />} />

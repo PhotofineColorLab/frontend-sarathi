@@ -219,12 +219,6 @@ const DashboardLayout = React.memo(({ children }: { children: React.ReactNode })
       icon: <BarChart4 className="h-5 w-5" />,
       show: isAdmin,
     },
-    {
-      name: 'Settings',
-      href: '/settings',
-      icon: <Settings className="h-5 w-5" />,
-      show: isAdmin,
-    },
   ], [isAdmin, user?.role]);
 
   const closeSidebar = useCallback(() => {
