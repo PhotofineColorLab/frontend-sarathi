@@ -1,6 +1,6 @@
 import { Order, OrderStatus, Product, User } from './types';
 
-const API_URL = 'https://sarathi-backend.onrender.com/api';
+const API_URL = 'https://backend-sarathi.onrender.com/api';
 
 
 // Auth functions

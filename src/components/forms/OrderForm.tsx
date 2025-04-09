@@ -39,12 +39,21 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 
 import { OrderStatus, PaymentCondition, Product, OrderItem, User, Order, OrderPriority } from '@/lib/types';
-import { createOrder, fetchStaff, fetchProducts, updateProduct, updateOrder, updateOrderWithImage } from '@/lib/api';
+import { createOrder, fetchStaff, fetchProducts, updateProduct, updateOrder, updateOrderWithImage, createProduct } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotifications } from '@/contexts/NotificationContext';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
 
 // Order form schema
 const orderFormSchema = z.object({
@@ -94,6 +103,11 @@ export default function OrderForm({ onSuccess, initialOrder, onCancel }: OrderFo
   const [productsLoading, setProductsLoading] = useState(true);
   const [productSearch, setProductSearch] = useState('');
   const [showProductResults, setShowProductResults] = useState(false);
+  const [isCreateProductDialogOpen, setIsCreateProductDialogOpen] = useState(false);
+  const [newProductName, setNewProductName] = useState('');
+  const [newProductPrice, setNewProductPrice] = useState('');
+  const [newProductStock, setNewProductStock] = useState('');
+  const [isCreatingProduct, setIsCreatingProduct] = useState(false);
   
   // Fetch products from API
   useEffect(() => {
@@ -117,12 +131,7 @@ export default function OrderForm({ onSuccess, initialOrder, onCancel }: OrderFo
   const filteredProducts = productSearch.trim() === ''
     ? products
     : products.filter(product => {
-        // Type assertion for products that might have 'sku' property
-        const productWithSku = product as (Product & { sku?: string });
-        
-        return product.name.toLowerCase().includes(productSearch.toLowerCase()) ||
-          (productWithSku.sku && typeof productWithSku.sku === 'string' && productWithSku.sku.toLowerCase().includes(productSearch.toLowerCase())) ||
-          (product.category && product.category.toLowerCase().includes(productSearch.toLowerCase()));
+        return product.name.toLowerCase().includes(productSearch.toLowerCase());
       });
       
   // Handle product selection from search results
@@ -375,6 +384,48 @@ export default function OrderForm({ onSuccess, initialOrder, onCancel }: OrderFo
       console.error('Navigation error:', error);
       // Fallback to direct location change
       window.location.href = '/orders';
+    }
+  };
+
+  // Handle create new product
+  const handleCreateProduct = async () => {
+    if (!newProductName || !newProductPrice || !newProductStock) {
+      toast.error('Please fill all required fields');
+      return;
+    }
+
+    setIsCreatingProduct(true);
+    
+    try {
+      const productData = {
+        name: newProductName,
+        price: parseFloat(newProductPrice),
+        stock: parseInt(newProductStock),
+      };
+
+      const newProduct = await createProduct(productData);
+      
+      // Add the new product to the products list
+      setProducts([newProduct, ...products]);
+      
+      // Auto-select the new product
+      setSelectedProduct(newProduct._id || newProduct.id);
+      setProductSearch(newProduct.name);
+      
+      // Reset form
+      setNewProductName('');
+      setNewProductPrice('');
+      setNewProductStock('');
+      
+      // Close dialog
+      setIsCreateProductDialogOpen(false);
+      
+      toast.success('Product created and added to order');
+    } catch (error) {
+      console.error('Error creating product:', error);
+      toast.error('Failed to create product');
+    } finally {
+      setIsCreatingProduct(false);
     }
   };
 
@@ -678,7 +729,7 @@ export default function OrderForm({ onSuccess, initialOrder, onCancel }: OrderFo
                       <div className="relative flex-1">
                         <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                         <Input
-                          placeholder="Search products by name, category, or SKU..."
+                          placeholder="Search products by name or create new..."
                           className="pl-8 border-0 focus-visible:ring-0"
                           value={productSearch}
                           onChange={(e) => {
@@ -717,42 +768,62 @@ export default function OrderForm({ onSuccess, initialOrder, onCancel }: OrderFo
                               <p className="text-sm text-muted-foreground mt-2">Loading products...</p>
                             </div>
                           ) : filteredProducts.length === 0 ? (
-                            <div className="p-4 text-center text-muted-foreground">
-                              No products found
+                            <div className="p-4">
+                              <p className="text-sm text-center text-muted-foreground mb-2">
+                                No products found
+                              </p>
+                              <Button 
+                                onClick={() => {
+                                  setIsCreateProductDialogOpen(true);
+                                  setNewProductName(productSearch);
+                                  setShowProductResults(false);
+                                }}
+                                variant="outline"
+                                className="w-full"
+                              >
+                                <Plus className="h-4 w-4 mr-2" />
+                                Create "{productSearch}"
+                              </Button>
                             </div>
                           ) : (
                             <div>
-                              {filteredProducts.map((product) => {
-                                // Type assertion for product in the UI
-                                const productWithSku = product as (Product & { sku?: string });
-                                
-                                return (
-                                  <div
-                                    key={product._id || product.id}
-                                    className={cn(
-                                      "flex items-center justify-between p-3 cursor-pointer hover:bg-muted transition-colors",
-                                      product.stock <= 0 && "opacity-50"
-                                    )}
-                                    onClick={() => product.stock > 0 && handleSelectProduct(product)}
-                                  >
-                                    <div>
-                                      <div className="font-medium">{product.name}</div>
-                                      <div className="text-sm text-muted-foreground">
-                                        {product.category} {productWithSku.sku && `• SKU: ${productWithSku.sku}`}
-                                      </div>
-                                    </div>
-                                    <div className="text-right">
-                                      <div>₹{product.price.toFixed(2)}</div>
-                                      <div className={cn(
-                                        "text-xs",
-                                        product.stock <= 5 ? "text-destructive" : "text-muted-foreground"
-                                      )}>
-                                        Stock: {product.stock}
-                                      </div>
+                              <div className="sticky top-0 p-2 bg-background border-b">
+                                <Button 
+                                  onClick={() => {
+                                    setIsCreateProductDialogOpen(true);
+                                    setNewProductName(productSearch);
+                                    setShowProductResults(false);
+                                  }}
+                                  variant="outline"
+                                  className="w-full"
+                                >
+                                  <Plus className="h-4 w-4 mr-2" />
+                                  Create new product
+                                </Button>
+                              </div>
+                              {filteredProducts.map((product) => (
+                                <div
+                                  key={product._id || product.id}
+                                  className={cn(
+                                    "flex items-center justify-between p-3 cursor-pointer hover:bg-muted transition-colors",
+                                    product.stock <= 0 && "opacity-50"
+                                  )}
+                                  onClick={() => product.stock > 0 && handleSelectProduct(product)}
+                                >
+                                  <div>
+                                    <div className="font-medium">{product.name}</div>
+                                  </div>
+                                  <div className="text-right">
+                                    <div>₹{product.price.toFixed(2)}</div>
+                                    <div className={cn(
+                                      "text-xs",
+                                      product.stock <= 5 ? "text-destructive" : "text-muted-foreground"
+                                    )}>
+                                      Stock: {product.stock}
                                     </div>
                                   </div>
-                                );
-                              })}
+                                </div>
+                              ))}
                             </div>
                           )}
                         </ScrollArea>
@@ -826,6 +897,71 @@ export default function OrderForm({ onSuccess, initialOrder, onCancel }: OrderFo
           </div>
         </form>
       </Form>
+
+      {/* Create Product Dialog */}
+      <Dialog open={isCreateProductDialogOpen} onOpenChange={setIsCreateProductDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Create New Product</DialogTitle>
+            <DialogDescription>
+              Add a new product to your inventory. This product will be automatically added to your order.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="productName">Product Name</Label>
+              <Input
+                id="productName"
+                value={newProductName}
+                onChange={(e) => setNewProductName(e.target.value)}
+                placeholder="Enter product name"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="productPrice">Price</Label>
+                <Input
+                  id="productPrice"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={newProductPrice}
+                  onChange={(e) => setNewProductPrice(e.target.value)}
+                  placeholder="0.00"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="productStock">Stock</Label>
+                <Input
+                  id="productStock"
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={newProductStock}
+                  onChange={(e) => setNewProductStock(e.target.value)}
+                  placeholder="0"
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setIsCreateProductDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button 
+              type="submit" 
+              onClick={handleCreateProduct}
+              disabled={isCreatingProduct}
+            >
+              {isCreatingProduct && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Create Product
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
