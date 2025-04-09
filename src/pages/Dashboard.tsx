@@ -14,7 +14,7 @@ import { NotificationBell } from '@/components/ui/notification-bell';
 import { useNotifications } from '@/contexts/NotificationContext';
 
 export default function Dashboard() {
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, isExecutive } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -228,69 +228,71 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 gap-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Recent Orders - Now showing truly recent orders */}
-            <Card className="dashboard-card animate-slide-in-bottom" style={{ animationDelay: '600ms' }}>
-              <CardHeader className={cn(isSmallMobile && "p-3")}>
-                <CardTitle className={cn("font-medium", isSmallMobile ? "text-base" : "text-lg")}>
-                  {isMobile ? "Recent Orders" : "Recently Created Orders"}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className={cn(isSmallMobile && "p-2")}>
-                {recentOrders.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-6 text-center">
-                    <Clock className="h-10 w-10 text-muted-foreground mb-3 opacity-25" />
-                    <p className="text-muted-foreground">No orders found</p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {recentOrders.slice(0, 4).map((order) => (
-                      <div key={order.id || order._id} className="flex items-center justify-between">
-                        <div className="space-y-1">
-                          <p className={cn(
-                            "font-medium",
+            {!isExecutive && (
+              <Card className="dashboard-card animate-slide-in-bottom" style={{ animationDelay: '600ms' }}>
+                <CardHeader className={cn(isSmallMobile && "p-3")}>
+                  <CardTitle className={cn("font-medium", isSmallMobile ? "text-base" : "text-lg")}>
+                    {isMobile ? "Recent Orders" : "Recently Created Orders"}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className={cn(isSmallMobile && "p-2")}>
+                  {recentOrders.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-6 text-center">
+                      <Clock className="h-10 w-10 text-muted-foreground mb-3 opacity-25" />
+                      <p className="text-muted-foreground">No orders found</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {recentOrders.slice(0, 4).map((order) => (
+                        <div key={order.id || order._id} className="flex items-center justify-between">
+                          <div className="space-y-1">
+                            <p className={cn(
+                              "font-medium",
+                              isSmallMobile ? "text-sm" : ""
+                            )}>
+                              Order #{order.orderNumber || (order._id && order._id.substring(0, 8))}
+                            </p>
+                            <div className="flex flex-col xs:flex-row xs:items-center gap-1 xs:gap-2">
+                              <Badge 
+                                variant="outline" 
+                                className={cn(
+                                  "w-fit capitalize", 
+                                  isSmallMobile && "text-[10px] px-1 py-0 h-5"
+                                )}
+                              >
+                                {order.status}
+                              </Badge>
+                              <p className={cn(
+                                "text-xs text-muted-foreground",
+                                isSmallMobile && "text-[10px]"
+                              )}>
+                                {new Date(order.createdAt).toLocaleDateString()}
+                              </p>
+                            </div>
+                          </div>
+                          <div className={cn(
+                            "font-medium", 
                             isSmallMobile ? "text-sm" : ""
                           )}>
-                            Order #{order.orderNumber || (order._id && order._id.substring(0, 8))}
-                          </p>
-                          <div className="flex flex-col xs:flex-row xs:items-center gap-1 xs:gap-2">
-                            <Badge 
-                              variant="outline" 
-                              className={cn(
-                                "w-fit capitalize", 
-                                isSmallMobile && "text-[10px] px-1 py-0 h-5"
-                              )}
-                            >
-                              {order.status}
-                            </Badge>
-                            <p className={cn(
-                              "text-xs text-muted-foreground",
-                              isSmallMobile && "text-[10px]"
-                            )}>
-                              {new Date(order.createdAt).toLocaleDateString()}
-                            </p>
+                            {formatCurrency(order.total)}
                           </div>
                         </div>
-                        <div className={cn(
-                          "font-medium", 
-                          isSmallMobile ? "text-sm" : ""
-                        )}>
-                          {formatCurrency(order.total)}
+                      ))}
+                      {recentOrders.length > 4 && (
+                        <div className="text-center pt-2">
+                          <Link 
+                            to="/orders" 
+                            className="text-sm text-primary hover:underline"
+                          >
+                            View all orders
+                          </Link>
                         </div>
-                      </div>
-                    ))}
-                    {recentOrders.length > 4 && (
-                      <div className="text-center pt-2">
-                        <Link 
-                          to="/orders" 
-                          className="text-sm text-primary hover:underline"
-                        >
-                          View all orders
-                        </Link>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                      )}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
             
             {/* Low Stock Products */}
             {isAdmin ? (

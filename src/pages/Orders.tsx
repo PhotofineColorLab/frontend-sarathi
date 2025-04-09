@@ -12,7 +12,7 @@ import { MarkPaidDialog } from '@/components/orders/MarkPaidDialog';
 import { Order, OrderStatus } from '@/lib/types';
 import OrderForm from '@/components/forms/OrderForm';
 import { PaginationWrapper } from '@/components/ui/pagination-wrapper';
-import { fetchOrders, fetchOrdersByDateRange, fetchOrdersByAssignedTo, deleteOrder, updateOrder, markOrderAsPaid } from '@/lib/api';
+import { fetchOrders, fetchOrdersByDateRange, fetchOrdersByAssignedTo, fetchOrdersByCreator, deleteOrder, updateOrder, markOrderAsPaid } from '@/lib/api';
 import { isAfter, isBefore, isEqual, startOfDay, format } from 'date-fns';
 import { useAuth } from '@/contexts/AuthContext';
 import { useIsMobile, useIsSmallMobile } from '@/hooks/use-mobile';
@@ -79,6 +79,22 @@ export default function Orders() {
           console.error("User ID not found:", user);
           toast.error("Could not determine user ID for assignments");
           fetchedOrders = await fetchOrders();
+        }
+      }
+      // For executive users, only show orders they created
+      else if (user && user.role === 'executive') {
+        const userId = user._id || user.id;
+        if (userId) {
+          console.log("Executive user - fetching orders created by:", userId);
+          fetchedOrders = await fetchOrdersByCreator(userId);
+          // Filter by status if not 'all'
+          if (activeTab !== 'all') {
+            fetchedOrders = fetchedOrders.filter(order => order.status === activeTab);
+          }
+        } else {
+          console.error("User ID not found:", user);
+          toast.error("Could not determine user ID");
+          fetchedOrders = [];
         }
       }
       // Otherwise fetch by status

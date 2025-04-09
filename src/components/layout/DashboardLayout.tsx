@@ -11,7 +11,8 @@ import {
   X, 
   ChevronRight, 
   ShoppingCart,
-  ChevronLeft
+  ChevronLeft,
+  Box
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { 
@@ -172,7 +173,7 @@ const DashboardLayout = React.memo(({ children }: { children: React.ReactNode })
   const isTablet = useIsTablet();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const { isAdmin } = useAuth();
+  const { isAdmin, isExecutive, user } = useAuth();
 
   // Update sidebar state based on screen size
   useEffect(() => {
@@ -188,43 +189,43 @@ const DashboardLayout = React.memo(({ children }: { children: React.ReactNode })
   }, [isMobile, isTablet]);
 
   const navigationItems = useMemo(() => [
-    { 
-      icon: <LayoutDashboard className="h-5 w-5" />, 
-      label: 'Dashboard', 
-      href: '/dashboard',
-      isAdminOnly: false,
+    {
+      name: 'Dashboard',
+      href: '/',
+      icon: <LayoutDashboard className="h-5 w-5" />,
+      show: isAdmin,
     },
-    { 
-      icon: <ShoppingCart className="h-5 w-5" />, 
-      label: 'Orders', 
+    {
+      name: 'Orders',
       href: '/orders',
-      isAdminOnly: false,
+      icon: <Package className="h-5 w-5" />,
+      show: true,
     },
-    { 
-      icon: <Package className="h-5 w-5" />, 
-      label: 'Products', 
+    {
+      name: 'Products',
       href: '/products',
-      isAdminOnly: false,
+      icon: <Box className="h-5 w-5" />,
+      show: isAdmin || user?.role === 'staff',
     },
-    { 
-      icon: <Users className="h-5 w-5" />, 
-      label: 'Staff', 
+    {
+      name: 'Staff',
       href: '/staff',
-      isAdminOnly: true,
+      icon: <Users className="h-5 w-5" />,
+      show: isAdmin,
     },
-    { 
-      icon: <BarChart4 className="h-5 w-5" />, 
-      label: 'Analytics', 
+    {
+      name: 'Analytics',
       href: '/analytics',
-      isAdminOnly: true,
+      icon: <BarChart4 className="h-5 w-5" />,
+      show: isAdmin,
     },
-    { 
-      icon: <Settings className="h-5 w-5" />, 
-      label: 'Settings', 
+    {
+      name: 'Settings',
       href: '/settings',
-      isAdminOnly: false,
+      icon: <Settings className="h-5 w-5" />,
+      show: isAdmin,
     },
-  ], []);
+  ], [isAdmin, user?.role]);
 
   const closeSidebar = useCallback(() => {
     if (isMobile) {
@@ -276,11 +277,11 @@ const DashboardLayout = React.memo(({ children }: { children: React.ReactNode })
             <NavItem
               key={item.href}
               icon={item.icon}
-              label={item.label}
+              label={item.name}
               href={item.href}
               isActive={pathname === item.href}
               onClick={closeSidebar}
-              isAdminOnly={item.isAdminOnly}
+              isAdminOnly={item.show !== true}
               collapsed={sidebarCollapsed}
             />
           ))}

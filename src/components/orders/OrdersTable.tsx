@@ -21,6 +21,7 @@ import {
 import { OrderStatusBadge } from './OrderStatusBadge';
 import { PaymentStatusBadge } from './PaymentStatusBadge';
 import { Order, OrderStatus } from '@/lib/types';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface OrdersTableProps {
   orders: Order[];
@@ -43,6 +44,7 @@ export function OrdersTable({
   isUpdateLoading,
   formatCurrency
 }: OrdersTableProps) {
+  const { isExecutive, isAdmin, user } = useAuth();
   const getOrderId = (order: Order) => order._id || order.id || '';
   const getDisplayOrderId = (order: Order) => {
     if (order.orderNumber) {
@@ -111,57 +113,63 @@ export function OrdersTable({
                         View details
                       </DropdownMenuItem>
                       
-                      <DropdownMenuItem 
-                        onClick={() => onUpdateOrder(order)}
-                      >
-                        Edit Order
-                      </DropdownMenuItem>
-                      
-                      {order.status === 'dispatched' && !order.isPaid && (
-                        <DropdownMenuItem 
-                          onClick={() => onMarkPaid(order)}
-                        >
-                          Mark as Paid
-                        </DropdownMenuItem>
-                      )}
+                      {!isExecutive && (isAdmin || (order.assignedTo === user?._id || order.assignedTo === user?.id)) && (
+                        <>
+                          <DropdownMenuItem 
+                            onClick={() => onUpdateOrder(order)}
+                          >
+                            Edit Order
+                          </DropdownMenuItem>
+                          
+                          {order.status === 'dispatched' && !order.isPaid && (
+                            <DropdownMenuItem 
+                              onClick={() => onMarkPaid(order)}
+                            >
+                              Mark as Paid
+                            </DropdownMenuItem>
+                          )}
 
-                      <DropdownMenuSeparator />
-                      <DropdownMenuLabel>Change Status</DropdownMenuLabel>
-                      <DropdownMenuItem
-                        disabled={order.status === 'pending' || isUpdateLoading}
-                        onClick={() => onStatusChange(getOrderId(order), 'pending')}
-                      >
-                        {isUpdateLoading && <Loader2 className="h-3 w-3 mr-2 animate-spin" />}
-                        Mark as Pending
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        disabled={order.status === 'dc' || isUpdateLoading}
-                        onClick={() => onStatusChange(getOrderId(order), 'dc')}
-                      >
-                        {isUpdateLoading && <Loader2 className="h-3 w-3 mr-2 animate-spin" />}
-                        Generate DC
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        disabled={order.status === 'invoice' || isUpdateLoading}
-                        onClick={() => onStatusChange(getOrderId(order), 'invoice')}
-                      >
-                        {isUpdateLoading && <Loader2 className="h-3 w-3 mr-2 animate-spin" />}
-                        Generate Invoice
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        disabled={order.status === 'dispatched' || isUpdateLoading}
-                        onClick={() => onStatusChange(getOrderId(order), 'dispatched')}
-                      >
-                        {isUpdateLoading && <Loader2 className="h-3 w-3 mr-2 animate-spin" />}
-                        Mark as Dispatched
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem 
-                        className="text-destructive focus:text-destructive"
-                        onClick={() => onDeleteOrder(order)}
-                      >
-                        Delete Order
-                      </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuLabel>Change Status</DropdownMenuLabel>
+                          <DropdownMenuItem
+                            disabled={order.status === 'pending' || isUpdateLoading}
+                            onClick={() => onStatusChange(getOrderId(order), 'pending')}
+                          >
+                            {isUpdateLoading && <Loader2 className="h-3 w-3 mr-2 animate-spin" />}
+                            Mark as Pending
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            disabled={order.status === 'dc' || isUpdateLoading}
+                            onClick={() => onStatusChange(getOrderId(order), 'dc')}
+                          >
+                            {isUpdateLoading && <Loader2 className="h-3 w-3 mr-2 animate-spin" />}
+                            Generate DC
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            disabled={order.status === 'invoice' || isUpdateLoading}
+                            onClick={() => onStatusChange(getOrderId(order), 'invoice')}
+                          >
+                            {isUpdateLoading && <Loader2 className="h-3 w-3 mr-2 animate-spin" />}
+                            Generate Invoice
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            disabled={order.status === 'dispatched' || isUpdateLoading}
+                            onClick={() => onStatusChange(getOrderId(order), 'dispatched')}
+                          >
+                            {isUpdateLoading && <Loader2 className="h-3 w-3 mr-2 animate-spin" />}
+                            Mark as Dispatched
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          {isAdmin && (
+                            <DropdownMenuItem 
+                              className="text-destructive focus:text-destructive"
+                              onClick={() => onDeleteOrder(order)}
+                            >
+                              Delete Order
+                            </DropdownMenuItem>
+                          )}
+                        </>
+                      )}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>

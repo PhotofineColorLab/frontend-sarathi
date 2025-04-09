@@ -342,6 +342,24 @@ export const fetchOrdersByAssignedTo = async (staffId: string) => {
   return response.json();
 };
 
+export const fetchOrdersByCreator = async (staffId: string) => {
+  const token = localStorage.getItem('token');
+  
+  const url = `${API_URL}/orders/created/${staffId}`;
+  
+  const response = await fetch(url, {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch orders created by staff');
+  }
+
+  return response.json();
+};
+
 export const createOrder = async (formData: FormData) => {
   const token = localStorage.getItem('token');
   
