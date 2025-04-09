@@ -1,6 +1,6 @@
 import { Order, OrderStatus, Product, User } from './types';
 
-const API_URL = 'https://backend-sarathi.onrender.com/api';
+const API_URL = 'https://sarathi-backend.onrender.com/api';
 
 
 // Auth functions
@@ -204,11 +204,9 @@ export const deleteStaff = async (id: string) => {
 };
 
 // Product functions
-export const fetchProducts = async (category?: string) => {
+export const fetchProducts = async () => {
   const token = localStorage.getItem('token');
-  const url = category 
-    ? `${API_URL}/products/category/${category}`
-    : `${API_URL}/products`;
+  const url = `${API_URL}/products`;
     
   const response = await fetch(url, {
     headers: {

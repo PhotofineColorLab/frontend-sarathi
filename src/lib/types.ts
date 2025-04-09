@@ -46,11 +46,8 @@ export interface Product {
   id?: string;
   _id?: string; // MongoDB ID
   name: string;
-  description: string;
   price: number;
-  category: ProductCategory;
   stock: number;
-  image?: string;
   createdAt: Date;
   updatedAt: Date;
 }

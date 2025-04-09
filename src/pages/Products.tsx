@@ -48,20 +48,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { Label } from '@/components/ui/label';
 import DashboardLayout from '@/components/layout/DashboardLayout';
-import { Product, ProductCategory } from '@/lib/types';
-import { Textarea } from '@/components/ui/textarea';
+import { Product } from '@/lib/types';
 import { fetchProducts, createProduct, updateProduct as updateProductAPI, deleteProduct as deleteProductAPI } from '@/lib/api';
 import { useIsMobile, useIsSmallMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
@@ -73,22 +65,8 @@ import { useNotifications } from '@/contexts/NotificationContext';
 
 const ITEMS_PER_PAGE = 10;
 
-const productCategories: { value: ProductCategory; label: string }[] = [
-  { value: 'fans', label: 'Fans' },
-  { value: 'lights', label: 'Lights' },
-  { value: 'switches', label: 'Switches' },
-  { value: 'sockets', label: 'Sockets' },
-  { value: 'wires', label: 'Wires' },
-  { value: 'conduits', label: 'Conduits' },
-  { value: 'mcbs', label: 'MCBs' },
-  { value: 'panels', label: 'Panels' },
-  { value: 'tools', label: 'Tools' },
-  { value: 'accessories', label: 'Accessories' },
-];
-
 export default function Products() {
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeCategory, setActiveCategory] = useState<ProductCategory | 'all'>('all');
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -102,11 +80,8 @@ export default function Products() {
   
   // Form states
   const [productName, setProductName] = useState(() => selectedProduct?.name || '');
-  const [productDescription, setProductDescription] = useState(() => selectedProduct?.description || '');
   const [productPrice, setProductPrice] = useState(() => selectedProduct?.price ? selectedProduct.price.toString() : '');
-  const [productCategory, setProductCategory] = useState<ProductCategory>(() => selectedProduct?.category as ProductCategory || 'fans');
   const [productStock, setProductStock] = useState(() => selectedProduct?.stock ? selectedProduct.stock.toString() : '');
-  const [productImage, setProductImage] = useState(() => selectedProduct?.image || '');
 
   const isMobile = useIsMobile();
   const isSmallMobile = useIsSmallMobile();
@@ -118,14 +93,14 @@ export default function Products() {
 
   const { addNotification } = useNotifications();
 
-  // Fetch products when component mounts or category changes
+  // Fetch products when component mounts
   useEffect(() => {
     const loadProducts = async () => {
       setIsLoading(true);
       try {
-        const data = await fetchProducts(activeCategory === 'all' ? undefined : activeCategory);
+        const data = await fetchProducts();
         setProducts(data);
-        setCurrentPage(1); // Reset to first page when category changes
+        setCurrentPage(1); // Reset to first page
       } catch (error) {
         console.error('Error loading products:', error);
         toast.error('Failed to load products');
@@ -135,17 +110,14 @@ export default function Products() {
     };
     
     loadProducts();
-  }, [activeCategory]);
+  }, []);
 
   // Populate form fields when editing a product
   useEffect(() => {
     if (selectedProduct && isEditing) {
       setProductName(selectedProduct.name || '');
-      setProductDescription(selectedProduct.description || '');
       setProductPrice(selectedProduct.price.toString() || '');
-      setProductCategory(selectedProduct.category || 'fans');
       setProductStock(selectedProduct.stock.toString() || '');
-      setProductImage(selectedProduct.image || '');
     } else if (!isEditing) {
       // Reset form when not editing
       resetForm();
@@ -161,11 +133,8 @@ export default function Products() {
 
   const resetForm = () => {
     setProductName('');
-    setProductDescription('');
     setProductPrice('');
-    setProductCategory('fans');
     setProductStock('');
-    setProductImage('');
     setIsEditing(false);
     setSelectedProduct(null);
   };
@@ -215,11 +184,8 @@ export default function Products() {
     try {
       const formData = {
         name: productName,
-        description: productDescription,
         price: parseFloat(productPrice),
         stock: parseInt(productStock),
-        category: productCategory,
-        image: productImage,
       };
 
       let updatedProduct;
@@ -316,30 +282,6 @@ export default function Products() {
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            
-            <div className="flex-shrink-0">
-              <Select
-                value={activeCategory}
-                onValueChange={(value) => setActiveCategory(value as ProductCategory | 'all')}
-              >
-                <SelectTrigger className={cn("w-full sm:w-auto", isMobile && "text-sm")}>
-                  <SelectValue placeholder="All Categories" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Categories</SelectItem>
-                  <SelectItem value="fans">Fans</SelectItem>
-                  <SelectItem value="lights">Lights</SelectItem>
-                  <SelectItem value="switches">Switches</SelectItem>
-                  <SelectItem value="sockets">Sockets</SelectItem>
-                  <SelectItem value="wires">Wires</SelectItem>
-                  <SelectItem value="conduits">Conduits</SelectItem>
-                  <SelectItem value="mcbs">MCBs</SelectItem>
-                  <SelectItem value="panels">Panels</SelectItem>
-                  <SelectItem value="tools">Tools</SelectItem>
-                  <SelectItem value="accessories">Accessories</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
           </div>
           
           <div className="flex flex-row gap-2 justify-between sm:justify-end">
@@ -377,7 +319,7 @@ export default function Products() {
             icon={<Package className="h-10 w-10 text-muted-foreground" />}
             title="No products found"
             description={searchTerm 
-              ? "Try adjusting your search term or filter" 
+              ? "Try adjusting your search term" 
               : "Get started by creating your first product"
             }
             action={
@@ -421,22 +363,11 @@ export default function Products() {
                   >
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-3">
-                        {product.image ? (
-                          <div className="w-10 h-10 rounded-md overflow-hidden bg-muted flex-shrink-0">
-                            <img 
-                              src={product.image} 
-                              alt={product.name} 
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                        ) : (
-                          <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center flex-shrink-0">
-                            <Package className="h-5 w-5 text-muted-foreground" />
-                          </div>
-                        )}
+                        <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center flex-shrink-0">
+                          <Package className="h-5 w-5 text-muted-foreground" />
+                        </div>
                         <div>
                           <h3 className="font-medium text-sm">{product.name}</h3>
-                          <p className="text-xs text-muted-foreground capitalize">{product.category}</p>
                         </div>
                       </div>
                       <Badge variant={product.stock > 10 ? "default" : "destructive"}>
@@ -480,7 +411,6 @@ export default function Products() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Name</TableHead>
-                    <TableHead>Category</TableHead>
                     <TableHead>Price</TableHead>
                     <TableHead>Stock</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
@@ -491,19 +421,9 @@ export default function Products() {
                     <TableRow key={product.id || product._id}>
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-3">
-                          {product.image ? (
-                            <div className="w-10 h-10 rounded-md overflow-hidden bg-muted">
-                              <img 
-                                src={product.image} 
-                                alt={product.name} 
-                                className="w-full h-full object-cover"
-                              />
-                            </div>
-                          ) : (
-                            <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
-                              <Package className="h-5 w-5 text-muted-foreground" />
-                            </div>
-                          )}
+                          <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                            <Package className="h-5 w-5 text-muted-foreground" />
+                          </div>
                           <div>
                             <span 
                               className="cursor-pointer hover:text-primary hover:underline"
@@ -514,7 +434,6 @@ export default function Products() {
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell className="capitalize">{product.category}</TableCell>
                       <TableCell>₹{product.price.toLocaleString()}</TableCell>
                       <TableCell>
                         <Badge variant={product.stock > 10 ? "default" : "destructive"}>
@@ -576,51 +495,15 @@ export default function Products() {
           </DialogHeader>
           
           <form onSubmit={handleSubmitProduct} className="space-y-4">
-            <div className={cn(
-              "grid gap-4",
-              isMobile ? "grid-cols-1" : "grid-cols-1 md:grid-cols-2"
-            )}>
-              <div className="space-y-2">
-                <Label htmlFor="name" className={cn(isMobile && "text-sm")}>Product Name</Label>
-                <Input
-                  id="name"
-                  value={productName}
-                  onChange={(e) => setProductName(e.target.value)}
-                  placeholder="Enter product name"
-                  required
-                  className={cn(isMobile && "h-9 text-sm")}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="category" className={cn(isMobile && "text-sm")}>Category</Label>
-                <Select
-                  value={productCategory}
-                  onValueChange={(value) => setProductCategory(value as ProductCategory)}
-                >
-                  <SelectTrigger className={cn(isMobile && "h-9 text-sm")}>
-                    <SelectValue placeholder="Select a category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {productCategories.map((category) => (
-                      <SelectItem key={category.value} value={category.value} className={cn(isMobile && "text-sm")}>
-                        {category.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            
             <div className="space-y-2">
-              <Label htmlFor="description" className={cn(isMobile && "text-sm")}>Description</Label>
-              <Textarea
-                id="description"
-                value={productDescription}
-                onChange={(e) => setProductDescription(e.target.value)}
-                placeholder="Enter product description"
+              <Label htmlFor="name" className={cn(isMobile && "text-sm")}>Product Name</Label>
+              <Input
+                id="name"
+                value={productName}
+                onChange={(e) => setProductName(e.target.value)}
+                placeholder="Enter product name"
                 required
-                className={cn(isMobile && "text-sm")}
+                className={cn(isMobile && "h-9 text-sm")}
               />
             </div>
             
@@ -657,30 +540,6 @@ export default function Products() {
                   className={cn(isMobile && "h-9 text-sm")}
                 />
               </div>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="image" className={cn(isMobile && "text-sm")}>Image URL</Label>
-              <Input
-                id="image"
-                value={productImage}
-                onChange={(e) => setProductImage(e.target.value)}
-                placeholder="https://example.com/image.jpg"
-                className={cn(isMobile && "h-9 text-sm")}
-              />
-              
-              {productImage && (
-                <div className="mt-2 rounded-md overflow-hidden border h-24 flex items-center justify-center">
-                  <img
-                    src={productImage}
-                    alt="Product preview"
-                    className="max-h-full object-contain"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = 'https://placehold.co/400x300?text=Invalid+Image+URL';
-                    }}
-                  />
-                </div>
-              )}
             </div>
 
             <DialogFooter className={cn(
@@ -722,7 +581,9 @@ export default function Products() {
           </DialogHeader>
           <div className="p-4 border rounded-md">
             <h4 className={cn("font-semibold", isMobile && "text-sm")}>{selectedProduct?.name}</h4>
-            <p className={cn("text-sm text-muted-foreground mt-1", isMobile && "text-xs")}>{selectedProduct?.description}</p>
+            <p className={cn("text-sm text-muted-foreground mt-1", isMobile && "text-xs")}>
+              Price: ₹{selectedProduct?.price.toLocaleString()} | Stock: {selectedProduct?.stock}
+            </p>
           </div>
           <DialogFooter className={cn(
             "gap-2",
@@ -760,49 +621,18 @@ export default function Products() {
           
           {selectedProduct && (
             <div className="space-y-4">
-              <div className={cn(
-                "flex gap-6",
-                isMobile ? "flex-col" : "flex-row md:flex-row"
-              )}>
-                <div className={cn(
-                  isMobile ? "w-full" : "w-full md:w-1/3"
-                )}>
-                  {selectedProduct.image ? (
-                    <div className="aspect-square rounded-lg overflow-hidden bg-muted">
-                      <img 
-                        src={selectedProduct.image} 
-                        alt={selectedProduct.name} 
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                  ) : (
-                    <div className="aspect-square rounded-lg bg-muted flex items-center justify-center">
-                      <Package className="h-12 w-12 text-muted-foreground opacity-50" />
-                    </div>
-                  )}
+              <div className="space-y-4">
+                <div>
+                  <h2 className={cn("font-bold", isMobile ? "text-lg" : "text-2xl")}>{selectedProduct.name}</h2>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Badge variant={selectedProduct.stock > 10 ? "default" : "destructive"}>
+                      {selectedProduct.stock > 0 ? `${selectedProduct.stock} in stock` : 'Out of stock'}
+                    </Badge>
+                  </div>
                 </div>
                 
-                <div className="flex-1 space-y-4">
-                  <div>
-                    <h2 className={cn("font-bold", isMobile ? "text-lg" : "text-2xl")}>{selectedProduct.name}</h2>
-                    <div className="flex items-center gap-2 mt-1">
-                      <Badge className="capitalize">{selectedProduct.category}</Badge>
-                      <Badge variant={selectedProduct.stock > 10 ? "default" : "destructive"}>
-                        {selectedProduct.stock > 0 ? `${selectedProduct.stock} in stock` : 'Out of stock'}
-                      </Badge>
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <p className={cn("font-bold", isMobile ? "text-xl" : "text-3xl")}>₹{selectedProduct.price.toLocaleString()}</p>
-                  </div>
-                  
-                  {selectedProduct.description && (
-                    <div>
-                      <h3 className={cn("text-muted-foreground mb-1", isMobile ? "text-xs" : "text-sm")}>Description</h3>
-                      <p className={isMobile ? "text-xs" : "text-sm"}>{selectedProduct.description}</p>
-                    </div>
-                  )}
+                <div>
+                  <p className={cn("font-bold", isMobile ? "text-xl" : "text-3xl")}>₹{selectedProduct.price.toLocaleString()}</p>
                 </div>
               </div>
               

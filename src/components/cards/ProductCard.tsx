@@ -9,11 +9,8 @@ interface Product {
   id?: string;
   _id?: string;
   name: string;
-  category: string;
   price: number;
   stock: number;
-  image?: string;
-  description?: string;
 }
 
 interface ProductCardProps {
@@ -37,17 +34,9 @@ export function ProductCard({
         className="relative h-48 w-full bg-muted cursor-pointer"
         onClick={onView}
       >
-        {product.image ? (
-          <img 
-            src={product.image} 
-            alt={product.name} 
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            <Package className="h-12 w-12 text-muted-foreground opacity-50" />
-          </div>
-        )}
+        <div className="w-full h-full flex items-center justify-center">
+          <Package className="h-12 w-12 text-muted-foreground opacity-50" />
+        </div>
         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
           <Button variant="default" size="sm" onClick={(e) => {
             e.stopPropagation();
@@ -63,7 +52,6 @@ export function ProductCard({
         <div className="mb-2 flex justify-between items-start">
           <div>
             <h3 className="font-medium line-clamp-1">{product.name}</h3>
-            <p className="text-xs text-muted-foreground capitalize">{product.category}</p>
           </div>
           <Badge variant={product.stock > 10 ? "default" : "destructive"} className="ml-2 flex-shrink-0">
             {product.stock > 0 ? `${product.stock}` : 'Out'}
@@ -71,12 +59,6 @@ export function ProductCard({
         </div>
         
         <p className="font-bold text-lg">₹{product.price.toLocaleString()}</p>
-        
-        {product.description && (
-          <p className="text-muted-foreground text-sm mt-2 line-clamp-2">
-            {product.description}
-          </p>
-        )}
       </CardContent>
       
       <CardFooter className="p-4 pt-0 flex justify-between">
