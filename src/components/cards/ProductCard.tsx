@@ -11,6 +11,7 @@ interface Product {
   name: string;
   price: number;
   stock: number;
+  dimension?: string;
 }
 
 interface ProductCardProps {
@@ -52,6 +53,9 @@ export function ProductCard({
         <div className="mb-2 flex justify-between items-start">
           <div>
             <h3 className="font-medium line-clamp-1">{product.name}</h3>
+            <p className="text-xs text-muted-foreground">
+              {product.dimension || 'Pc'}
+            </p>
           </div>
           <Badge variant={product.stock > 10 ? "default" : "destructive"} className="ml-2 flex-shrink-0">
             {product.stock > 0 ? `${product.stock}` : 'Out'}

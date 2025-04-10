@@ -42,7 +42,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 
-import { OrderStatus, PaymentCondition, Product, OrderItem, User, Order, OrderPriority } from '@/lib/types';
+import { OrderStatus, PaymentCondition, Product, ProductDimension, OrderItem, User, Order, OrderPriority } from '@/lib/types';
 import { createOrder, fetchStaff, fetchProducts, updateProduct, updateOrder, updateOrderWithImage, createProduct } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotifications } from '@/contexts/NotificationContext';
@@ -91,7 +91,8 @@ export default function OrderForm({ onSuccess, initialOrder, onCancel }: OrderFo
         productId: item.productId,
         productName: item.productName,
         quantity: item.quantity,
-        price: item.price
+        price: item.price,
+        dimension: item.dimension
       }));
     }
     return [];
@@ -107,7 +108,25 @@ export default function OrderForm({ onSuccess, initialOrder, onCancel }: OrderFo
   const [newProductName, setNewProductName] = useState('');
   const [newProductPrice, setNewProductPrice] = useState('');
   const [newProductStock, setNewProductStock] = useState('');
+  const [newProductDimension, setNewProductDimension] = useState<ProductDimension>('Pc');
   const [isCreatingProduct, setIsCreatingProduct] = useState(false);
+  
+  // Ref for detecting clicks outside the search dropdown
+  const searchRef = React.useRef<HTMLDivElement>(null);
+  
+  // Close search results when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+        setShowProductResults(false);
+      }
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
   
   // Fetch products from API
   useEffect(() => {
@@ -209,6 +228,7 @@ export default function OrderForm({ onSuccess, initialOrder, onCancel }: OrderFo
         productName: product.name,
         quantity: quantity,
         price: product.price,
+        dimension: product.dimension
       };
       setOrderItems([...orderItems, newItem]);
     }
@@ -246,7 +266,8 @@ export default function OrderForm({ onSuccess, initialOrder, onCancel }: OrderFo
         productId: item.productId,
         productName: item.productName,
         quantity: item.quantity,
-        price: item.price
+        price: item.price,
+        dimension: item.dimension
       }));
       
       // Create the base order data
@@ -401,8 +422,11 @@ export default function OrderForm({ onSuccess, initialOrder, onCancel }: OrderFo
         name: newProductName,
         price: parseFloat(newProductPrice),
         stock: parseInt(newProductStock),
+        dimension: newProductDimension
       };
 
+      console.log('Creating product with data:', productData);
+      
       const newProduct = await createProduct(productData);
       
       // Add the new product to the products list
@@ -416,6 +440,7 @@ export default function OrderForm({ onSuccess, initialOrder, onCancel }: OrderFo
       setNewProductName('');
       setNewProductPrice('');
       setNewProductStock('');
+      setNewProductDimension('Pc');
       
       // Close dialog
       setIsCreateProductDialogOpen(false);
@@ -724,7 +749,7 @@ export default function OrderForm({ onSuccess, initialOrder, onCancel }: OrderFo
                 <h3 className="text-lg font-medium">Order Items</h3>
                 
                 <div className="space-y-2">
-                  <div className="relative">
+                  <div className="relative" ref={searchRef}>
                     <div className="flex items-center border rounded-md">
                       <div className="relative flex-1">
                         <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -757,6 +782,23 @@ export default function OrderForm({ onSuccess, initialOrder, onCancel }: OrderFo
                         Add
                       </Button>
                     </div>
+                    
+                    {selectedProduct && (
+                      <div className="mt-2 text-sm text-muted-foreground">
+                        {(() => {
+                          const product = products.find(p => p._id === selectedProduct || p.id === selectedProduct);
+                          if (product) {
+                            return (
+                              <span>
+                                Selected: <strong>{product.name}</strong> (₹{product.price.toFixed(2)}) - 
+                                <span className="font-medium">{product.dimension || 'Pc'}</span>
+                              </span>
+                            );
+                          }
+                          return null;
+                        })()}
+                      </div>
+                    )}
                     
                     {/* Search results */}
                     {showProductResults && productSearch && (
@@ -812,6 +854,9 @@ export default function OrderForm({ onSuccess, initialOrder, onCancel }: OrderFo
                                 >
                                   <div>
                                     <div className="font-medium">{product.name}</div>
+                                    <div className="text-xs text-muted-foreground">
+                                      {product.dimension || 'Pc'}
+                                    </div>
                                   </div>
                                   <div className="text-right">
                                     <div>₹{product.price.toFixed(2)}</div>
@@ -842,6 +887,7 @@ export default function OrderForm({ onSuccess, initialOrder, onCancel }: OrderFo
                             <TableHead className="text-center">Qty</TableHead>
                             <TableHead className="text-right">Price</TableHead>
                             <TableHead className="text-right">Total</TableHead>
+                            <TableHead className="text-center">Dimension</TableHead>
                             <TableHead></TableHead>
                           </TableRow>
                         </TableHeader>
@@ -852,6 +898,7 @@ export default function OrderForm({ onSuccess, initialOrder, onCancel }: OrderFo
                               <TableCell className="text-center">{item.quantity}</TableCell>
                               <TableCell className="text-right">₹{item.price.toFixed(2)}</TableCell>
                               <TableCell className="text-right">₹{(item.price * item.quantity).toFixed(2)}</TableCell>
+                              <TableCell className="text-center">{item.dimension || 'Pc'}</TableCell>
                               <TableCell className="text-right">
                                 <Button
                                   type="button"
@@ -942,6 +989,32 @@ export default function OrderForm({ onSuccess, initialOrder, onCancel }: OrderFo
                   placeholder="0"
                 />
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="productDimension">Dimension</Label>
+              <Select 
+                value={newProductDimension}
+                onValueChange={(value) => setNewProductDimension(value as ProductDimension)}
+              >
+                <SelectTrigger id="productDimension">
+                  <SelectValue placeholder="Select dimension" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Bag">Bag</SelectItem>
+                  <SelectItem value="Bundle">Bundle</SelectItem>
+                  <SelectItem value="Box">Box</SelectItem>
+                  <SelectItem value="Coils">Coils</SelectItem>
+                  <SelectItem value="Dozen">Dozen</SelectItem>
+                  <SelectItem value="Ft">Ft</SelectItem>
+                  <SelectItem value="Gross">Gross</SelectItem>
+                  <SelectItem value="Kg">Kg</SelectItem>
+                  <SelectItem value="Mtr">Mtr</SelectItem>
+                  <SelectItem value="Pc">Pc</SelectItem>
+                  <SelectItem value="Pkt">Pkt</SelectItem>
+                  <SelectItem value="Set">Set</SelectItem>
+                  <SelectItem value="Not Applicable">Not Applicable</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <DialogFooter>

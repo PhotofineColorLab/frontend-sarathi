@@ -42,12 +42,15 @@ export type ProductCategory =
   | 'tools'
   | 'accessories';
 
+export type ProductDimension = 'Bag' | 'Bundle' | 'Box' | 'Coils' | 'Dozen' | 'Ft' | 'Gross' | 'Kg' | 'Mtr' | 'Pc' | 'Pkt' | 'Set' | 'Not Applicable';
+
 export interface Product {
   id?: string;
   _id?: string; // MongoDB ID
   name: string;
   price: number;
   stock: number;
+  dimension?: ProductDimension;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -65,6 +68,7 @@ export interface OrderItem {
   productName: string;
   quantity: number;
   price: number;
+  dimension?: ProductDimension;
 }
 
 export interface Order {

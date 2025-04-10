@@ -53,8 +53,8 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { Label } from '@/components/ui/label';
 import DashboardLayout from '@/components/layout/DashboardLayout';
-import { Product } from '@/lib/types';
-import { fetchProducts, createProduct, updateProduct as updateProductAPI, deleteProduct as deleteProductAPI } from '@/lib/api';
+import { Product, ProductDimension } from '@/lib/types';
+import { fetchProducts, createProduct, updateProduct as updateProductAPI, deleteProduct as deleteProductAPI, testDeleteProduct } from '@/lib/api';
 import { useIsMobile, useIsSmallMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -62,10 +62,13 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { ProductCard } from '@/components/cards/ProductCard';
 import { useNavigate } from 'react-router-dom';
 import { useNotifications } from '@/contexts/NotificationContext';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useAuth } from '@/contexts/AuthContext';
 
 const ITEMS_PER_PAGE = 10;
 
 export default function Products() {
+  const { isAuthenticated, user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -82,6 +85,7 @@ export default function Products() {
   const [productName, setProductName] = useState(() => selectedProduct?.name || '');
   const [productPrice, setProductPrice] = useState(() => selectedProduct?.price ? selectedProduct.price.toString() : '');
   const [productStock, setProductStock] = useState(() => selectedProduct?.stock ? selectedProduct.stock.toString() : '');
+  const [productDimension, setProductDimension] = useState<ProductDimension>(() => (selectedProduct?.dimension as ProductDimension) || 'Pc');
 
   const isMobile = useIsMobile();
   const isSmallMobile = useIsSmallMobile();
@@ -98,8 +102,25 @@ export default function Products() {
     const loadProducts = async () => {
       setIsLoading(true);
       try {
+        console.log('Fetching products with auth state:', { isAuthenticated, userRole: user?.role });
         const data = await fetchProducts();
-        setProducts(data);
+        
+        // Ensure all products have consistent ID properties
+        const processedProducts = data.map((product: any) => {
+          // Create a new object with both _id and id properties consistent
+          const processedProduct = { ...product };
+          if (product._id && !product.id) {
+            // If MongoDB _id exists but client id doesn't, set id = _id
+            processedProduct.id = product._id;
+          } else if (product.id && !product._id) {
+            // If client id exists but MongoDB _id doesn't, set _id = id
+            processedProduct._id = product.id;
+          }
+          return processedProduct;
+        });
+        
+        console.log('Processed products with consistent IDs:', processedProducts);
+        setProducts(processedProducts);
         setCurrentPage(1); // Reset to first page
       } catch (error) {
         console.error('Error loading products:', error);
@@ -109,8 +130,13 @@ export default function Products() {
       }
     };
     
-    loadProducts();
-  }, []);
+    if (isAuthenticated) {
+      loadProducts();
+    } else {
+      toast.error('Authentication required');
+      navigate('/login');
+    }
+  }, [isAuthenticated, user]);
 
   // Populate form fields when editing a product
   useEffect(() => {
@@ -118,6 +144,7 @@ export default function Products() {
       setProductName(selectedProduct.name || '');
       setProductPrice(selectedProduct.price.toString() || '');
       setProductStock(selectedProduct.stock.toString() || '');
+      setProductDimension((selectedProduct.dimension as ProductDimension) || 'Pc');
     } else if (!isEditing) {
       // Reset form when not editing
       resetForm();
@@ -135,6 +162,7 @@ export default function Products() {
     setProductName('');
     setProductPrice('');
     setProductStock('');
+    setProductDimension('Pc');
     setIsEditing(false);
     setSelectedProduct(null);
   };
@@ -144,36 +172,70 @@ export default function Products() {
     setIsViewDialogOpen(true);
   };
 
+  // Function to safely get product ID (supports both MongoDB _id and client-side id)
+  const getProductId = (product: Product): string => {
+    // If no product, return empty string
+    if (!product) return '';
+    
+    // Convert _id or id to string, with fallbacks
+    return String(product._id || product.id || '');
+  };
+
+  // Handle edit using consistent ID
   const handleEditProduct = (product: any) => {
+    console.log('Editing product with ID:', getProductId(product));
+    console.log('Full product object:', product);
     setSelectedProduct(product);
     setIsProductFormOpen(true);
     setIsEditing(true);
   };
 
-  const handleDeleteProduct = async (productId: string) => {
+  // Direct handler for product deletion with simplified ID handling
+  const handleDirectDelete = async (product: Product) => {
+    // Log product details for debugging
+    console.log('Delete initiated for product:', {
+      product,
+      name: product.name,
+      price: product.price,
+      _id: product._id,
+      id: product.id
+    });
+    
+    // Get ID for deletion, prioritizing MongoDB _id
+    const deleteId = product._id || product.id;
+    
+    // Exit if no ID is available
+    if (!deleteId) {
+      toast.error(`Cannot delete ${product.name}: No ID available`);
+      return;
+    }
+    
+    // Confirm deletion
+    if (!confirm(`Are you sure you want to delete "${product.name}"?`)) {
+      return;
+    }
+    
     try {
-      // Find the product before deleting it
-      const productToDelete = products.find(p => 
-        (p._id || p.id) === productId
+      toast.loading(`Deleting ${product.name}...`);
+      
+      // Call the API with the ID
+      console.log(`Attempting to delete product with ID: ${deleteId}`);
+      await deleteProductAPI(deleteId as string);
+      
+      // Update local state
+      setProducts(prev => 
+        prev.filter(p => !(
+          (p._id && p._id === product._id) || 
+          (p.id && p.id === product.id)
+        ))
       );
-      const productName = productToDelete?.name || 'Product';
       
-      await deleteProductAPI(productId);
-      setProducts(products.filter(p => (p._id || p.id) !== productId));
-      setIsDeleteDialogOpen(false);
-      
-      toast.success('Product deleted successfully');
-      
-      // Add notification for product deletion
-      addNotification({
-        type: 'product',
-        title: 'Product Deleted',
-        message: `${productName} has been successfully deleted`,
-        actionUrl: '/products'
-      });
-    } catch (error) {
+      toast.dismiss();
+      toast.success(`${product.name} deleted successfully`);
+    } catch (error: any) {
+      toast.dismiss();
       console.error('Failed to delete product:', error);
-      toast.error('Failed to delete product');
+      toast.error(error.message || 'Failed to delete product');
     }
   };
 
@@ -186,16 +248,19 @@ export default function Products() {
         name: productName,
         price: parseFloat(productPrice),
         stock: parseInt(productStock),
+        dimension: productDimension
       };
 
+      console.log('Submitting product with data:', formData);
+      
       let updatedProduct;
       
       if (isEditing && selectedProduct) {
-        const productId = selectedProduct._id || selectedProduct.id;
+        const productId = getProductId(selectedProduct);
         updatedProduct = await updateProductAPI(productId, formData);
         
         setProducts(
-          products.map(p => (p._id || p.id) === productId ? updatedProduct : p)
+          products.map(p => (getProductId(p) === productId ? updatedProduct : p))
         );
         
         toast.success('Product updated successfully');
@@ -241,11 +306,6 @@ export default function Products() {
   const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE);
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
   const paginatedProducts = filteredProducts.slice(startIndex, startIndex + ITEMS_PER_PAGE);
-
-  // Function to get product ID (supports both mock data and MongoDB)
-  const getProductId = (product: Product) => {
-    return product._id || product.id;
-  };
 
   return (
     <DashboardLayout>
@@ -336,14 +396,11 @@ export default function Products() {
           )}>
             {filteredProducts.map((product) => (
               <ProductCard
-                key={product.id || product._id}
+                key={getProductId(product)}
                 product={product}
                 onView={() => handleViewProduct(product)}
                 onEdit={() => handleEditProduct(product)}
-                onDelete={() => {
-                  setSelectedProduct(product);
-                  setIsDeleteDialogOpen(true);
-                }}
+                onDelete={() => handleDirectDelete(product)}
                 className={cn(
                   isMobile && "p-3 text-sm" // Smaller padding and text for mobile
                 )}
@@ -357,7 +414,7 @@ export default function Products() {
               <div className="divide-y">
                 {filteredProducts.map((product) => (
                   <div 
-                    key={product.id || product._id}
+                    key={getProductId(product)}
                     className="p-4 hover:bg-muted/50 transition-colors"
                     onClick={() => handleViewProduct(product)}
                   >
@@ -368,6 +425,7 @@ export default function Products() {
                         </div>
                         <div>
                           <h3 className="font-medium text-sm">{product.name}</h3>
+                          <p className="text-xs text-muted-foreground">{product.dimension || 'Pc'}</p>
                         </div>
                       </div>
                       <Badge variant={product.stock > 10 ? "default" : "destructive"}>
@@ -394,8 +452,7 @@ export default function Products() {
                           className="h-8 w-8 p-0 text-destructive"
                           onClick={(e) => {
                             e.stopPropagation();
-                            setSelectedProduct(product);
-                            setIsDeleteDialogOpen(true);
+                            handleDirectDelete(product);
                           }}
                         >
                           <Trash className="h-4 w-4" />
@@ -413,12 +470,13 @@ export default function Products() {
                     <TableHead>Name</TableHead>
                     <TableHead>Price</TableHead>
                     <TableHead>Stock</TableHead>
+                    <TableHead>Dimension</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredProducts.map((product) => (
-                    <TableRow key={product.id || product._id}>
+                    <TableRow key={getProductId(product)}>
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
@@ -431,6 +489,9 @@ export default function Products() {
                             >
                               {product.name}
                             </span>
+                            <div className="text-xs text-muted-foreground">
+                              {product.dimension || 'Pc'}
+                            </div>
                           </div>
                         </div>
                       </TableCell>
@@ -439,6 +500,9 @@ export default function Products() {
                         <Badge variant={product.stock > 10 ? "default" : "destructive"}>
                           {product.stock > 0 ? `${product.stock} in stock` : 'Out of stock'}
                         </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{product.dimension || 'Pc'}</Badge>
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end space-x-2">
@@ -458,8 +522,7 @@ export default function Products() {
                             className="text-destructive"
                             onClick={(e) => {
                               e.stopPropagation();
-                              setSelectedProduct(product);
-                              setIsDeleteDialogOpen(true);
+                              handleDirectDelete(product);
                             }}
                           >
                             <Trash className="h-4 w-4" />
@@ -542,6 +605,38 @@ export default function Products() {
               </div>
             </div>
 
+            <div className={cn(
+              "grid gap-4",
+              isMobile ? "grid-cols-1" : "grid-cols-1 md:grid-cols-2"
+            )}>
+              <div className="space-y-2">
+                <Label htmlFor="dimension" className={cn(isMobile && "text-sm")}>Dimension</Label>
+                <Select
+                  value={productDimension}
+                  onValueChange={(value) => setProductDimension(value as ProductDimension)}
+                >
+                  <SelectTrigger className={cn(isMobile && "h-9 text-sm")}>
+                    <SelectValue placeholder="Select dimension" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Bag">Bag</SelectItem>
+                    <SelectItem value="Bundle">Bundle</SelectItem>
+                    <SelectItem value="Box">Box</SelectItem>
+                    <SelectItem value="Coils">Coils</SelectItem>
+                    <SelectItem value="Dozen">Dozen</SelectItem>
+                    <SelectItem value="Ft">Ft</SelectItem>
+                    <SelectItem value="Gross">Gross</SelectItem>
+                    <SelectItem value="Kg">Kg</SelectItem>
+                    <SelectItem value="Mtr">Mtr</SelectItem>
+                    <SelectItem value="Pc">Pc</SelectItem>
+                    <SelectItem value="Pkt">Pkt</SelectItem>
+                    <SelectItem value="Set">Set</SelectItem>
+                    <SelectItem value="Not Applicable">Not Applicable</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
             <DialogFooter className={cn(
               "gap-2 mt-6",
               isMobile && "flex-col"
@@ -567,48 +662,6 @@ export default function Products() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete confirmation dialog */}
-      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent className={cn(
-          isMobile && "w-[95vw] p-4"
-        )}>
-          <DialogHeader>
-            <DialogTitle className={cn(isMobile && "text-lg")}>Delete Product</DialogTitle>
-            <DialogDescription className={cn(isMobile && "text-xs")}>
-              Are you sure you want to delete this product?
-              This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="p-4 border rounded-md">
-            <h4 className={cn("font-semibold", isMobile && "text-sm")}>{selectedProduct?.name}</h4>
-            <p className={cn("text-sm text-muted-foreground mt-1", isMobile && "text-xs")}>
-              Price: ₹{selectedProduct?.price.toLocaleString()} | Stock: {selectedProduct?.stock}
-            </p>
-          </div>
-          <DialogFooter className={cn(
-            "gap-2",
-            isMobile && "flex-col"
-          )}>
-            <Button
-              variant="outline"
-              onClick={() => setIsDeleteDialogOpen(false)}
-              className={cn(isMobile && "w-full h-9")}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={() => selectedProduct && handleDeleteProduct(getProductId(selectedProduct))}
-              disabled={isDeleting}
-              className={cn(isMobile && "w-full h-9")}
-            >
-              {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Delete
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
       {/* Product view dialog */}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
         <DialogContent className={cn(
@@ -628,6 +681,7 @@ export default function Products() {
                     <Badge variant={selectedProduct.stock > 10 ? "default" : "destructive"}>
                       {selectedProduct.stock > 0 ? `${selectedProduct.stock} in stock` : 'Out of stock'}
                     </Badge>
+                    <Badge variant="outline">{selectedProduct.dimension || 'Pc'}</Badge>
                   </div>
                 </div>
                 
@@ -655,8 +709,7 @@ export default function Products() {
                   variant="destructive"
                   onClick={() => {
                     setIsViewDialogOpen(false);
-                    setSelectedProduct(selectedProduct);
-                    setIsDeleteDialogOpen(true);
+                    handleDirectDelete(selectedProduct as Product);
                   }}
                   className={cn(isMobile && "w-full h-9")}
                 >
@@ -664,6 +717,37 @@ export default function Products() {
                   Delete Product
                 </Button>
               </DialogFooter>
+              
+              <div className="pt-4 mt-4 border-t border-dashed">
+                <h3 className="text-sm font-semibold mb-2">Product ID Information</h3>
+                <div className="text-xs font-mono bg-muted p-2 rounded">
+                  <div>_id: {JSON.stringify(selectedProduct._id)}</div>
+                  <div>id: {JSON.stringify(selectedProduct.id)}</div>
+                  <div>Using: {JSON.stringify(selectedProduct._id || selectedProduct.id)}</div>
+                </div>
+                <div className="mt-2 flex gap-2">
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={() => {
+                      const productToDebug = selectedProduct;
+                      console.log('Product debug info:');
+                      console.log('Full product:', productToDebug);
+                      console.log('Keys:', Object.keys(productToDebug));
+                      console.log('_id:', productToDebug._id, typeof productToDebug._id);
+                      console.log('id:', productToDebug.id, typeof productToDebug.id);
+                      console.log('Selected ID for operations:', productToDebug._id || productToDebug.id);
+
+                      // Check what the update function would receive
+                      const updateId = productToDebug._id || productToDebug.id;
+                      console.log('Would update with ID:', updateId);
+                      toast.info(`Product would use ID: ${updateId}`);
+                    }}
+                  >
+                    Debug Product
+                  </Button>
+                </div>
+              </div>
             </div>
           )}
         </DialogContent>

@@ -1,7 +1,41 @@
 import { Order, OrderStatus, Product, User } from './types';
 
-const API_URL = 'https://backend-sarathi.onrender.com/api';
+// API URL setup
+// Use environment variable or fallback to localhost
+const API_URL = import.meta.env.VITE_API_URL || 'https://backend-sarathi.onrender.com/api';
+console.log('API URL configured as:', API_URL);
 
+// Debug helper
+const debug = (message: string, data?: any) => {
+  if (import.meta.env.DEV) {
+    console.log(`[API] ${message}`, data || '');
+  }
+};
+
+// Helper function to get auth token
+const getAuthToken = () => {
+  const token = localStorage.getItem('token');
+  if (!token) {
+    debug('No authentication token found in localStorage');
+    return '';
+  }
+  debug('Token found in localStorage', { tokenLength: token.length });
+  return token;
+};
+
+// Helper function to create headers with authentication
+const createAuthHeaders = (contentType = 'application/json') => {
+  const token = getAuthToken();
+  const headers: Record<string, string> = {
+    'Authorization': `Bearer ${token}`
+  };
+  
+  if (contentType) {
+    headers['Content-Type'] = contentType;
+  }
+  
+  return headers;
+};
 
 // Auth functions
 export const loginStaff = async (email: string, password: string) => {
@@ -205,7 +239,7 @@ export const deleteStaff = async (id: string) => {
 
 // Product functions
 export const fetchProducts = async () => {
-  const token = localStorage.getItem('token');
+  const token = getAuthToken();
   const url = `${API_URL}/products`;
     
   const response = await fetch(url, {
@@ -222,7 +256,12 @@ export const fetchProducts = async () => {
 };
 
 export const createProduct = async (productData: Omit<Product, 'id' | '_id' | 'createdAt' | 'updatedAt'>) => {
-  const token = localStorage.getItem('token');
+  const token = getAuthToken();
+  
+  if (!token) {
+    throw new Error('Authentication required');
+  }
+  
   const response = await fetch(`${API_URL}/products`, {
     method: 'POST',
     headers: {
@@ -241,7 +280,12 @@ export const createProduct = async (productData: Omit<Product, 'id' | '_id' | 'c
 };
 
 export const updateProduct = async (id: string, productData: Partial<Product>) => {
-  const token = localStorage.getItem('token');
+  const token = getAuthToken();
+  
+  if (!token) {
+    throw new Error('Authentication required');
+  }
+  
   const response = await fetch(`${API_URL}/products/${id}`, {
     method: 'PUT',
     headers: {
@@ -260,20 +304,59 @@ export const updateProduct = async (id: string, productData: Partial<Product>) =
 };
 
 export const deleteProduct = async (id: string) => {
-  const token = localStorage.getItem('token');
-  const response = await fetch(`${API_URL}/products/${id}`, {
-    method: 'DELETE',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-    },
-  });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || 'Failed to delete product');
+  const token = getAuthToken();
+  
+  if (!token) {
+    console.error('No authentication token available');
+    throw new Error('Authentication required');
   }
 
-  return response.json();
+  if (!id) {
+    console.error('No product ID provided for deletion');
+    throw new Error('Product ID is required');
+  }
+
+  // Log details for debugging
+  console.log(`API: Deleting product with ID: "${id}" (${typeof id})`);
+  
+  try {
+    // Make the request
+    const response = await fetch(`${API_URL}/products/${id}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    
+    // Log response status
+    console.log(`API: Delete response status: ${response.status}`);
+    
+    if (!response.ok) {
+      // Try to parse error JSON if possible
+      try {
+        const errorData = await response.json();
+        console.error('API: Delete error response:', errorData);
+        throw new Error(errorData.message || `Failed to delete product (${response.status})`);
+      } catch (parseError) {
+        // If we can't parse JSON, throw generic error
+        throw new Error(`Failed to delete product: Server returned ${response.status}`);
+      }
+    }
+    
+    // Try to parse success JSON if possible
+    try {
+      const result = await response.json();
+      console.log('API: Delete success response:', result);
+      return result;
+    } catch (parseError) {
+      // Some endpoints might not return JSON
+      console.log('API: No JSON in successful delete response');
+      return { success: true };
+    }
+  } catch (error) {
+    console.error('API: Error in deleteProduct:', error);
+    throw error;
+  }
 };
 
 // Order functions
@@ -512,4 +595,89 @@ export const getAllStaffAttendanceByDate = async (date: string) => {
   }
 
   return response.json();
+};
+
+export const loginUser = async (email: string, password: string) => {
+  const response = await fetch(`${API_URL}/staff/login`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ email, password }),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || 'Login failed');
+  }
+
+  // Store the token and user in localStorage
+  localStorage.setItem('token', data.token);
+  localStorage.setItem('user', JSON.stringify(data.user));
+
+  return data;
+};
+
+// Special method just for product deletion testing
+export const testDeleteProduct = async (id: string) => {
+  if (!id) {
+    debug('Test delete product called with no ID');
+    throw new Error('Product ID is required for deletion');
+  }
+  
+  const token = getAuthToken();
+  debug('Test delete product called', { id, tokenLength: token?.length });
+  
+  if (!token) {
+    debug('No auth token available for test delete');
+    throw new Error('Authentication required');
+  }
+  
+  try {
+    // Ensure we're connecting to the right endpoint
+    const url = `${API_URL}/products/${id}`;
+    debug('Making test DELETE request to', { url });
+    
+    const response = await fetch(url, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    
+    debug('Test delete response', { 
+      status: response.status,
+      ok: response.ok,
+      statusText: response.statusText
+    });
+    
+    if (!response.ok) {
+      const statusCode = response.status;
+      let errorMessage = `Failed to delete product: ${statusCode}`;
+      
+      try {
+        const errorData = await response.json();
+        debug('Error response data', errorData);
+        errorMessage = errorData.message || errorMessage;
+      } catch (e) {
+        debug('Could not parse error response as JSON');
+      }
+      
+      throw new Error(errorMessage);
+    }
+    
+    // Try to get the response data
+    try {
+      const data = await response.json();
+      debug('Test delete success', data);
+      return data;
+    } catch (e) {
+      debug('No JSON in success response');
+      return { success: true, message: 'Product deleted successfully' };
+    }
+  } catch (error) {
+    console.error('Error in test delete product:', error);
+    throw error;
+  }
 }; 
