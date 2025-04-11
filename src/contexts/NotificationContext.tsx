@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
 
 export type NotificationType = 'order' | 'product' | 'staff' | 'system';
 
@@ -40,13 +39,11 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   
-  // Load notifications from localStorage on initial render
   useEffect(() => {
     const storedNotifications = localStorage.getItem('notifications');
     if (storedNotifications) {
       try {
         const parsed = JSON.parse(storedNotifications);
-        // Convert string timestamps back to Date objects
         const formattedNotifications = parsed.map((notification: any) => ({
           ...notification,
           timestamp: new Date(notification.timestamp),
@@ -59,12 +56,10 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     }
   }, []);
 
-  // Update localStorage whenever notifications change
   useEffect(() => {
     localStorage.setItem('notifications', JSON.stringify(notifications));
   }, [notifications]);
 
-  // Add a new notification
   const addNotification = useCallback((notification: Omit<Notification, 'id' | 'timestamp' | 'read'>) => {
     const newNotification: Notification = {
       ...notification,
@@ -73,10 +68,9 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
       read: false,
     };
 
-    setNotifications(prev => [newNotification, ...prev].slice(0, 50)); // Keep only the latest 50 notifications
+    setNotifications(prev => [newNotification, ...prev].slice(0, 50));
     setUnreadCount(prev => prev + 1);
     
-    // Show browser notification if supported and permission is granted
     if ('Notification' in window && Notification.permission === 'granted') {
       new Notification(notification.title, {
         body: notification.message,
@@ -85,7 +79,6 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     }
   }, []);
 
-  // Mark a notification as read
   const markAsRead = useCallback((id: string) => {
     setNotifications(prev => 
       prev.map(notification => 
@@ -95,7 +88,6 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     setUnreadCount(prev => Math.max(0, prev - 1));
   }, []);
 
-  // Mark all notifications as read
   const markAllAsRead = useCallback(() => {
     setNotifications(prev => 
       prev.map(notification => ({ ...notification, read: true }))
@@ -103,14 +95,12 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     setUnreadCount(0);
   }, []);
 
-  // Clear all notifications
   const clearNotifications = useCallback(() => {
     setNotifications([]);
     setUnreadCount(0);
     localStorage.removeItem('notifications');
   }, []);
 
-  // Request notification permission if not already granted
   useEffect(() => {
     if ('Notification' in window && Notification.permission !== 'granted' && Notification.permission !== 'denied') {
       Notification.requestPermission();

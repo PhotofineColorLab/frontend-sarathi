@@ -1,19 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { format } from 'date-fns';
 import {
   Edit,
   Loader2,
-  MoreHorizontal,
   Package,
-  Plus,
   Search,
-  Trash2,
-  ChevronLeft,
-  ChevronRight,
-  List,
-  PlusCircle,
-  Eye,
   Trash,
+  ChevronLeft,
+  PlusCircle,
 } from 'lucide-react';
 import {
   Card,
@@ -21,14 +14,6 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -47,16 +32,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { Label } from '@/components/ui/label';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Product, ProductDimension } from '@/lib/types';
-import { fetchProducts, createProduct, updateProduct as updateProductAPI, deleteProduct as deleteProductAPI, testDeleteProduct } from '@/lib/api';
+import { fetchProducts, createProduct, updateProduct as updateProductAPI, deleteProduct as deleteProductAPI } from '@/lib/api';
 import { useIsMobile, useIsSmallMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { EmptyState } from '@/components/ui/empty-state';
 import { useNavigate } from 'react-router-dom';
 import { useNotifications } from '@/contexts/NotificationContext';
@@ -77,7 +60,7 @@ export default function Products() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-
+  
   // Form states
   const [productName, setProductName] = useState(() => selectedProduct?.name || '');
   const [productPrice, setProductPrice] = useState(() => selectedProduct?.price ? selectedProduct.price.toString() : '');
@@ -96,24 +79,19 @@ export default function Products() {
     const loadProducts = async () => {
       setIsLoading(true);
       try {
-        console.log('Fetching products with auth state:', { isAuthenticated, userRole: user?.role });
         const data = await fetchProducts();
         
         // Ensure all products have consistent ID properties
         const processedProducts = data.map((product: any) => {
-          // Create a new object with both _id and id properties consistent
           const processedProduct = { ...product };
           if (product._id && !product.id) {
-            // If MongoDB _id exists but client id doesn't, set id = _id
             processedProduct.id = product._id;
           } else if (product.id && !product._id) {
-            // If client id exists but MongoDB _id doesn't, set _id = id
             processedProduct._id = product.id;
           }
           return processedProduct;
         });
         
-        console.log('Processed products with consistent IDs:', processedProducts);
         setProducts(processedProducts);
         setCurrentPage(1); // Reset to first page
       } catch (error) {
@@ -125,7 +103,7 @@ export default function Products() {
     };
     
     if (isAuthenticated) {
-      loadProducts();
+    loadProducts();
     } else {
       toast.error('Authentication required');
       navigate('/login');
@@ -167,17 +145,12 @@ export default function Products() {
 
   // Function to safely get product ID (supports both MongoDB _id and client-side id)
   const getProductId = (product: Product): string => {
-    // If no product, return empty string
     if (!product) return '';
-    
-    // Convert _id or id to string, with fallbacks
     return String(product._id || product.id || '');
   };
 
   // Handle edit using consistent ID
   const handleEditProduct = (product: any) => {
-    console.log('Editing product with ID:', getProductId(product));
-    console.log('Full product object:', product);
     setSelectedProduct(product);
     setIsProductFormOpen(true);
     setIsEditing(true);
@@ -185,25 +158,13 @@ export default function Products() {
 
   // Direct handler for product deletion with simplified ID handling
   const handleDirectDelete = async (product: Product) => {
-    // Log product details for debugging
-    console.log('Delete initiated for product:', {
-      product,
-      name: product.name,
-      price: product.price,
-      _id: product._id,
-      id: product.id
-    });
-    
-    // Get ID for deletion, prioritizing MongoDB _id
     const deleteId = product._id || product.id;
     
-    // Exit if no ID is available
     if (!deleteId) {
       toast.error(`Cannot delete ${product.name}: No ID available`);
       return;
     }
     
-    // Confirm deletion
     if (!confirm(`Are you sure you want to delete "${product.name}"?`)) {
       return;
     }
@@ -211,11 +172,8 @@ export default function Products() {
     try {
       toast.loading(`Deleting ${product.name}...`);
       
-      // Call the API with the ID
-      console.log(`Attempting to delete product with ID: ${deleteId}`);
       await deleteProductAPI(deleteId as string);
       
-      // Update local state
       setProducts(prev => 
         prev.filter(p => !(
           (p._id && p._id === product._id) || 
@@ -244,8 +202,6 @@ export default function Products() {
         dimension: productDimension
       };
 
-      console.log('Submitting product with data:', formData);
-      
       let updatedProduct;
       
       if (isEditing && selectedProduct) {
@@ -258,7 +214,6 @@ export default function Products() {
         
         toast.success('Product updated successfully');
         
-        // Add notification for product update
         addNotification({
           type: 'product',
           title: 'Product Updated',
@@ -271,7 +226,6 @@ export default function Products() {
         
         toast.success('Product added successfully');
         
-        // Add notification for new product
         addNotification({
           type: 'product',
           title: 'New Product Added',
@@ -377,9 +331,9 @@ export default function Products() {
                   >
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center flex-shrink-0">
-                          <Package className="h-5 w-5 text-muted-foreground" />
-                        </div>
+                          <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center flex-shrink-0">
+                            <Package className="h-5 w-5 text-muted-foreground" />
+                          </div>
                         <div>
                           <h3 className="font-medium text-sm">{product.name}</h3>
                           <p className="text-xs text-muted-foreground">{product.dimension || 'Pc'}</p>
@@ -436,9 +390,9 @@ export default function Products() {
                     <TableRow key={getProductId(product)}>
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
-                            <Package className="h-5 w-5 text-muted-foreground" />
-                          </div>
+                            <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                              <Package className="h-5 w-5 text-muted-foreground" />
+                            </div>
                           <div>
                             <span 
                               className="cursor-pointer hover:text-primary hover:underline"
@@ -518,15 +472,15 @@ export default function Products() {
           </DialogHeader>
           
           <form onSubmit={handleSubmitProduct} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="name" className={cn(isMobile && "text-sm")}>Product Name</Label>
-              <Input
-                id="name"
-                value={productName}
-                onChange={(e) => setProductName(e.target.value)}
-                placeholder="Enter product name"
-                required
-                className={cn(isMobile && "h-9 text-sm")}
+              <div className="space-y-2">
+                <Label htmlFor="name" className={cn(isMobile && "text-sm")}>Product Name</Label>
+                <Input
+                  id="name"
+                  value={productName}
+                  onChange={(e) => setProductName(e.target.value)}
+                  placeholder="Enter product name"
+                  required
+                  className={cn(isMobile && "h-9 text-sm")}
               />
             </div>
             
@@ -564,12 +518,12 @@ export default function Products() {
                 />
               </div>
             </div>
-
+            
             <div className={cn(
               "grid gap-4",
               isMobile ? "grid-cols-1" : "grid-cols-1 md:grid-cols-2"
             )}>
-              <div className="space-y-2">
+            <div className="space-y-2">
                 <Label htmlFor="dimension" className={cn(isMobile && "text-sm")}>Dimension</Label>
                 <Select
                   value={productDimension}
@@ -594,7 +548,7 @@ export default function Products() {
                     <SelectItem value="Not Applicable">Not Applicable</SelectItem>
                   </SelectContent>
                 </Select>
-              </div>
+                </div>
             </div>
 
             <DialogFooter className={cn(

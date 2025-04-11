@@ -50,10 +50,8 @@ export function OrdersTable({
   const getOrderId = (order: Order) => order._id || order.id || '';
   const getDisplayOrderId = (order: Order) => {
     if (order.orderNumber) {
-      console.log('Using orderNumber:', order.orderNumber);
       return order.orderNumber;
     } else {
-      console.log('No orderNumber found, using ID:', order._id || order.id);
       return `#${(order._id || order.id || '').substring(0, 8)}`;
     }
   };

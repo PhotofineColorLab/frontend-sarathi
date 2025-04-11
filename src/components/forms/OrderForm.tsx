@@ -455,29 +455,31 @@ export default function OrderForm({ onSuccess, initialOrder, onCancel }: OrderFo
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 px-2 sm:px-0">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div>
-          <h2 className="text-2xl font-bold">{initialOrder ? 'Update Order' : 'Create New Order'}</h2>
-          <p className="text-muted-foreground">
+          <h2 className="text-xl sm:text-2xl font-bold">{initialOrder ? 'Update Order' : 'Create New Order'}</h2>
+          <p className="text-sm text-muted-foreground">
             {initialOrder ? 'Edit the existing order details' : 'Add a new customer order to the system'}
           </p>
         </div>
         <Button
           variant="outline"
+          size="sm"
           onClick={handleCancel}
+          className="sm:self-start"
         >
           Cancel
         </Button>
       </div>
       
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-6">
-              {/* Customer Information */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-medium">Customer Information</h3>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <div className="grid grid-cols-1 gap-6">
+            {/* Customer Information */}
+            <div className="space-y-4">
+              <h3 className="text-md sm:text-lg font-medium">Customer Information</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
                   name="customerName"
@@ -505,26 +507,28 @@ export default function OrderForm({ onSuccess, initialOrder, onCancel }: OrderFo
                     </FormItem>
                   )}
                 />
-                
-                <FormField
-                  control={form.control}
-                  name="customerEmail"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email (Optional)</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Enter email address" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
               </div>
               
-              {/* Order Settings */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-medium">Order Settings</h3>
-                
+              <FormField
+                control={form.control}
+                name="customerEmail"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email (Optional)</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter email address" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            
+            {/* Order Settings */}
+            <div className="space-y-4">
+              <h3 className="text-md sm:text-lg font-medium">Order Settings</h3>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
                   name="status"
@@ -554,6 +558,40 @@ export default function OrderForm({ onSuccess, initialOrder, onCancel }: OrderFo
                 
                 <FormField
                   control={form.control}
+                  name="assignedTo"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Assigned To</FormLabel>
+                      <Select 
+                        onValueChange={field.onChange} 
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select staff member" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="all">All Staff</SelectItem>
+                          {staffMembers.map((staff) => (
+                            <SelectItem 
+                              key={staff.id || staff._id} 
+                              value={staff.id || staff._id}
+                            >
+                              {staff.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
                   name="paymentCondition"
                   render={({ field }) => (
                     <FormItem className="space-y-3">
@@ -562,7 +600,7 @@ export default function OrderForm({ onSuccess, initialOrder, onCancel }: OrderFo
                         <RadioGroup
                           onValueChange={field.onChange}
                           defaultValue={field.value}
-                          className="flex space-x-4"
+                          className="flex flex-wrap gap-4"
                         >
                           <FormItem className="flex items-center space-x-2 space-y-0">
                             <FormControl>
@@ -605,7 +643,7 @@ export default function OrderForm({ onSuccess, initialOrder, onCancel }: OrderFo
                         <RadioGroup
                           onValueChange={field.onChange}
                           defaultValue={field.value}
-                          className="flex space-x-4"
+                          className="flex flex-wrap gap-4"
                         >
                           <FormItem className="flex items-center space-x-2 space-y-0">
                             <FormControl>
@@ -637,144 +675,111 @@ export default function OrderForm({ onSuccess, initialOrder, onCancel }: OrderFo
                     </FormItem>
                   )}
                 />
-                
-                <FormField
-                  control={form.control}
-                  name="assignedTo"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Assigned To</FormLabel>
-                      <Select 
-                        onValueChange={field.onChange} 
-                        defaultValue={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select staff member" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="all">All Staff</SelectItem>
-                          {staffMembers.map((staff) => (
-                            <SelectItem 
-                              key={staff.id || staff._id} 
-                              value={staff.id || staff._id}
-                            >
-                              {staff.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="notes"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Notes (Optional)</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          placeholder="Add any additional notes or details here"
-                          className="min-h-[100px]"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <div>
-                  <FormLabel>Order Image (Optional)</FormLabel>
-                  <div className="mt-2">
-                    <div className="flex items-center gap-4">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="h-9"
-                        onClick={() => document.getElementById('image-upload')?.click()}
-                      >
-                        <Upload className="mr-2 h-4 w-4" />
-                        Upload
-                      </Button>
-                      <Input
-                        id="image-upload"
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={handleImageChange}
+              </div>
+              
+              <FormField
+                control={form.control}
+                name="notes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Notes (Optional)</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Add any additional notes or details here"
+                        className="min-h-[80px]"
+                        {...field}
                       />
-                      <p className="text-sm text-muted-foreground">
-                        PNG, JPG or GIF, max 5MB
-                      </p>
-                    </div>
-                    
-                    {imagePreview && (
-                      <div className="mt-4">
-                        <p className="text-sm font-medium mb-2">Preview:</p>
-                        <div className="relative">
-                          <img
-                            src={imagePreview}
-                            alt="Order Preview"
-                            className="rounded-md max-h-[200px] object-contain"
-                          />
-                          <Button
-                            type="button"
-                            variant="destructive"
-                            size="icon"
-                            className="absolute top-2 right-2 h-6 w-6"
-                            onClick={() => {
-                              setOrderImage(null);
-                              setImagePreview(null);
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    )}
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <div>
+                <FormLabel>Order Image (Optional)</FormLabel>
+                <div className="mt-2">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-9 w-full sm:w-auto"
+                      onClick={() => document.getElementById('image-upload')?.click()}
+                    >
+                      <Upload className="mr-2 h-4 w-4" />
+                      Upload
+                    </Button>
+                    <Input
+                      id="image-upload"
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleImageChange}
+                    />
+                    <p className="text-sm text-muted-foreground">
+                      PNG, JPG or GIF, max 5MB
+                    </p>
                   </div>
+                  
+                  {imagePreview && (
+                    <div className="mt-4">
+                      <p className="text-sm font-medium mb-2">Preview:</p>
+                      <div className="relative">
+                        <img
+                          src={imagePreview}
+                          alt="Order Preview"
+                          className="rounded-md max-h-[200px] object-contain"
+                        />
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="icon"
+                          className="absolute top-2 right-2 h-6 w-6"
+                          onClick={() => {
+                            setOrderImage(null);
+                            setImagePreview(null);
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
             
-            <div className="space-y-6">
-              {/* Order Items */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-medium">Order Items</h3>
-                
-                <div className="space-y-2">
-                  <div className="relative" ref={searchRef}>
-                    <div className="flex items-center border rounded-md">
-                      <div className="relative flex-1">
-                        <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                        <Input
-                          placeholder="Search products by name or create new..."
-                          className="pl-8 border-0 focus-visible:ring-0"
-                          value={productSearch}
-                          onChange={(e) => {
-                            setProductSearch(e.target.value);
-                            setShowProductResults(true);
-                          }}
-                          onFocus={() => setShowProductResults(true)}
-                        />
-                      </div>
+            {/* Order Items */}
+            <div className="space-y-4">
+              <h3 className="text-md sm:text-lg font-medium">Order Items</h3>
+              
+              <div className="space-y-2">
+                <div className="relative" ref={searchRef}>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <div className="relative flex-1">
+                      <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        placeholder="Search products by name or create new..."
+                        className="pl-8"
+                        value={productSearch}
+                        onChange={(e) => {
+                          setProductSearch(e.target.value);
+                          setShowProductResults(true);
+                        }}
+                        onFocus={() => setShowProductResults(true)}
+                      />
+                    </div>
+                    <div className="flex">
                       <Input
                         type="number"
                         min="1"
                         value={quantity}
                         onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
                         placeholder="Qty"
-                        className="w-20 h-10 border-0 focus-visible:ring-0 border-l rounded-none"
+                        className="w-full sm:w-20 rounded-r-none"
                       />
                       <Button
                         type="button"
-                        size="sm"
                         className="rounded-l-none"
                         onClick={handleAddItem}
                         disabled={!selectedProduct}
@@ -782,38 +787,55 @@ export default function OrderForm({ onSuccess, initialOrder, onCancel }: OrderFo
                         Add
                       </Button>
                     </div>
-                    
-                    {selectedProduct && (
-                      <div className="mt-2 text-sm text-muted-foreground">
-                        {(() => {
-                          const product = products.find(p => p._id === selectedProduct || p.id === selectedProduct);
-                          if (product) {
-                            return (
-                              <span>
-                                Selected: <strong>{product.name}</strong> (₹{product.price.toFixed(2)}) - 
-                                <span className="font-medium">{product.dimension || 'Pc'}</span>
-                              </span>
-                            );
-                          }
-                          return null;
-                        })()}
-                      </div>
-                    )}
-                    
-                    {/* Search results */}
-                    {showProductResults && productSearch && (
-                      <div className="absolute w-full z-10 mt-1 border rounded-md bg-background shadow-lg">
-                        <ScrollArea className="h-60">
-                          {productsLoading ? (
-                            <div className="p-4 text-center">
-                              <Loader2 className="h-5 w-5 mx-auto animate-spin text-muted-foreground" />
-                              <p className="text-sm text-muted-foreground mt-2">Loading products...</p>
-                            </div>
-                          ) : filteredProducts.length === 0 ? (
-                            <div className="p-4">
-                              <p className="text-sm text-center text-muted-foreground mb-2">
-                                No products found
-                              </p>
+                  </div>
+                  
+                  {selectedProduct && (
+                    <div className="mt-2 text-sm text-muted-foreground">
+                      {(() => {
+                        const product = products.find(p => p._id === selectedProduct || p.id === selectedProduct);
+                        if (product) {
+                          return (
+                            <span>
+                              Selected: <strong>{product.name}</strong> (₹{product.price.toFixed(2)}) - 
+                              <span className="font-medium">{product.dimension || 'Pc'}</span>
+                            </span>
+                          );
+                        }
+                        return null;
+                      })()}
+                    </div>
+                  )}
+                  
+                  {/* Search results */}
+                  {showProductResults && productSearch && (
+                    <div className="absolute w-full z-10 mt-1 border rounded-md bg-background shadow-lg">
+                      <ScrollArea className="h-60">
+                        {productsLoading ? (
+                          <div className="p-4 text-center">
+                            <Loader2 className="h-5 w-5 mx-auto animate-spin text-muted-foreground" />
+                            <p className="text-sm text-muted-foreground mt-2">Loading products...</p>
+                          </div>
+                        ) : filteredProducts.length === 0 ? (
+                          <div className="p-4">
+                            <p className="text-sm text-center text-muted-foreground mb-2">
+                              No products found
+                            </p>
+                            <Button 
+                              onClick={() => {
+                                setIsCreateProductDialogOpen(true);
+                                setNewProductName(productSearch);
+                                setShowProductResults(false);
+                              }}
+                              variant="outline"
+                              className="w-full"
+                            >
+                              <Plus className="h-4 w-4 mr-2" />
+                              Create "{productSearch}"
+                            </Button>
+                          </div>
+                        ) : (
+                          <div>
+                            <div className="sticky top-0 p-2 bg-background border-b">
                               <Button 
                                 onClick={() => {
                                   setIsCreateProductDialogOpen(true);
@@ -824,116 +846,108 @@ export default function OrderForm({ onSuccess, initialOrder, onCancel }: OrderFo
                                 className="w-full"
                               >
                                 <Plus className="h-4 w-4 mr-2" />
-                                Create "{productSearch}"
+                                Create new product
                               </Button>
                             </div>
-                          ) : (
-                            <div>
-                              <div className="sticky top-0 p-2 bg-background border-b">
-                                <Button 
-                                  onClick={() => {
-                                    setIsCreateProductDialogOpen(true);
-                                    setNewProductName(productSearch);
-                                    setShowProductResults(false);
-                                  }}
-                                  variant="outline"
-                                  className="w-full"
-                                >
-                                  <Plus className="h-4 w-4 mr-2" />
-                                  Create new product
-                                </Button>
-                              </div>
-                              {filteredProducts.map((product) => (
-                                <div
-                                  key={product._id || product.id}
-                                  className={cn(
-                                    "flex items-center justify-between p-3 cursor-pointer hover:bg-muted transition-colors",
-                                    product.stock <= 0 && "opacity-50"
-                                  )}
-                                  onClick={() => product.stock > 0 && handleSelectProduct(product)}
-                                >
-                                  <div>
-                                    <div className="font-medium">{product.name}</div>
-                                    <div className="text-xs text-muted-foreground">
-                                      {product.dimension || 'Pc'}
-                                    </div>
-                                  </div>
-                                  <div className="text-right">
-                                    <div>₹{product.price.toFixed(2)}</div>
-                                    <div className={cn(
-                                      "text-xs",
-                                      product.stock <= 5 ? "text-destructive" : "text-muted-foreground"
-                                    )}>
-                                      Stock: {product.stock}
-                                    </div>
+                            {filteredProducts.map((product) => (
+                              <div
+                                key={product._id || product.id}
+                                className={cn(
+                                  "flex items-center justify-between p-3 cursor-pointer hover:bg-muted transition-colors",
+                                  product.stock <= 0 && "opacity-50"
+                                )}
+                                onClick={() => product.stock > 0 && handleSelectProduct(product)}
+                              >
+                                <div>
+                                  <div className="font-medium">{product.name}</div>
+                                  <div className="text-xs text-muted-foreground">
+                                    {product.dimension || 'Pc'}
                                   </div>
                                 </div>
-                              ))}
-                            </div>
-                          )}
-                        </ScrollArea>
-                      </div>
-                    )}
-                  </div>
+                                <div className="text-right">
+                                  <div>₹{product.price.toFixed(2)}</div>
+                                  <div className={cn(
+                                    "text-xs",
+                                    product.stock <= 5 ? "text-destructive" : "text-muted-foreground"
+                                  )}>
+                                    Stock: {product.stock}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </ScrollArea>
+                    </div>
+                  )}
                 </div>
-                
-                {orderItems.length > 0 ? (
-                  <Card>
-                    <CardContent className="p-0">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Product</TableHead>
-                            <TableHead className="text-center">Qty</TableHead>
-                            <TableHead className="text-right">Price</TableHead>
-                            <TableHead className="text-right">Total</TableHead>
-                            <TableHead className="text-center">Dimension</TableHead>
-                            <TableHead></TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {orderItems.map((item) => (
-                            <TableRow key={item.id}>
-                              <TableCell>{item.productName}</TableCell>
-                              <TableCell className="text-center">{item.quantity}</TableCell>
-                              <TableCell className="text-right">₹{item.price.toFixed(2)}</TableCell>
-                              <TableCell className="text-right">₹{(item.price * item.quantity).toFixed(2)}</TableCell>
-                              <TableCell className="text-center">{item.dimension || 'Pc'}</TableCell>
-                              <TableCell className="text-right">
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => handleRemoveItem(item.id)}
-                                >
-                                  <Trash2 className="h-4 w-4 text-destructive" />
-                                </Button>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </CardContent>
-                  </Card>
-                ) : (
-                  <div className="text-center py-6 border rounded-md border-dashed">
-                    <p className="text-muted-foreground">No items added yet</p>
-                  </div>
-                )}
-                
-                {orderItems.length > 0 && (
-                  <div className="flex justify-between items-center pt-4 border-t">
-                    <span className="text-lg font-medium">Total Amount:</span>
-                    <span className="text-xl font-bold">₹{calculateTotal().toFixed(2)}</span>
-                  </div>
-                )}
               </div>
+              
+              {orderItems.length > 0 ? (
+                <Card>
+                  <CardContent className="p-0 overflow-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Product</TableHead>
+                          <TableHead className="text-center">Qty</TableHead>
+                          <TableHead className="text-right">Price</TableHead>
+                          <TableHead className="text-right">Total</TableHead>
+                          <TableHead className="text-center">Dimension</TableHead>
+                          <TableHead></TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {orderItems.map((item) => (
+                          <TableRow key={item.id}>
+                            <TableCell className="max-w-[120px] sm:max-w-none truncate">{item.productName}</TableCell>
+                            <TableCell className="text-center">{item.quantity}</TableCell>
+                            <TableCell className="text-right">₹{item.price.toFixed(2)}</TableCell>
+                            <TableCell className="text-right">₹{(item.price * item.quantity).toFixed(2)}</TableCell>
+                            <TableCell className="text-center">{item.dimension || 'Pc'}</TableCell>
+                            <TableCell className="text-right p-0 pr-2">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleRemoveItem(item.id)}
+                              >
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="text-center py-6 border rounded-md border-dashed">
+                  <p className="text-muted-foreground">No items added yet</p>
+                </div>
+              )}
+              
+              {orderItems.length > 0 && (
+                <div className="flex justify-between items-center pt-4 border-t">
+                  <span className="text-lg font-medium">Total Amount:</span>
+                  <span className="text-xl font-bold">₹{calculateTotal().toFixed(2)}</span>
+                </div>
+              )}
             </div>
           </div>
           
-          <div className="flex justify-end">
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 mt-6">
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full sm:w-auto"
+              onClick={handleCancel}
+            >
+              Cancel
+            </Button>
             <Button
               type="submit"
+              className="w-full sm:w-auto"
               disabled={isLoading || uploadingImage}
             >
               {(isLoading || uploadingImage) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -947,7 +961,7 @@ export default function OrderForm({ onSuccess, initialOrder, onCancel }: OrderFo
 
       {/* Create Product Dialog */}
       <Dialog open={isCreateProductDialogOpen} onOpenChange={setIsCreateProductDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[425px] p-4 sm:p-6">
           <DialogHeader>
             <DialogTitle>Create New Product</DialogTitle>
             <DialogDescription>

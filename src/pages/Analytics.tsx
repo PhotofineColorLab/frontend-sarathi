@@ -16,15 +16,10 @@ import {
   ResponsiveContainer,
   LineChart,
   Line,
-  PieChart,
-  Pie,
-  Cell,
-  Legend,
 } from 'recharts';
 import { 
   BarChart4, 
   TrendingUp, 
-  PieChart as PieChartIcon, 
   ArrowUpRight, 
   ArrowDownRight,
   Users,
@@ -37,8 +32,6 @@ import { fetchOrders, fetchProducts } from '@/lib/api';
 import { toast } from 'sonner';
 import { useIsMobile, useIsSmallMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
-
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ffc658', '#8dd1e1', '#a4de6c', '#d0ed57'];
 
 export default function Analytics() {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -95,27 +88,6 @@ export default function Analytics() {
     };
   };
 
-  // Calculate sales by category
-  const calculateSalesByCategory = () => {
-    const categories: { [key: string]: number } = {};
-    
-    orders.forEach(order => {
-      order.items.forEach(item => {
-        const product = products.find(p => p._id === item.productId || p.id === item.productId);
-        if (product) {
-          const { category } = product;
-          const amount = item.price * item.quantity;
-          categories[category] = (categories[category] || 0) + amount;
-        }
-      });
-    });
-    
-    return Object.entries(categories).map(([category, amount]) => ({
-      category,
-      amount: Number(amount.toFixed(2)),
-    })).sort((a, b) => b.amount - a.amount);
-  };
-
   // Calculate sales by period (last 7 days)
   const calculateSalesByPeriod = () => {
     const last7Days = Array.from({ length: 7 }, (_, i) => {
@@ -124,12 +96,7 @@ export default function Analytics() {
       return date.toISOString().split('T')[0];
     }).reverse();
     
-    const salesByDate: { [date: string]: number } = {};
-    
-    // Initialize all dates with 0
-    last7Days.forEach(date => {
-      salesByDate[date] = 0;
-    });
+    const salesByDate = Object.fromEntries(last7Days.map(date => [date, 0]));
     
     // Sum up sales for each date
     orders.forEach(order => {
@@ -145,9 +112,38 @@ export default function Analytics() {
     }));
   };
 
+  // Calculate sales by product
+  const calculateSalesByProduct = () => {
+    const productSales: { [key: string]: { name: string, amount: number } } = {};
+    
+    orders.forEach(order => {
+      order.items.forEach(item => {
+        const product = products.find(p => p._id === item.productId || p.id === item.productId);
+        if (product) {
+          const productId = product._id || product.id || '';
+          const productName = product.name;
+          const amount = item.price * item.quantity;
+          
+          if (productSales[productId]) {
+            productSales[productId].amount += amount;
+          } else {
+            productSales[productId] = { name: productName, amount };
+          }
+        }
+      });
+    });
+    
+    return Object.values(productSales)
+      .sort((a, b) => b.amount - a.amount)
+      .map(({ name, amount }) => ({
+        name,
+        amount: Number(amount.toFixed(2)),
+      }));
+  };
+
   const analytics = calculateAnalytics();
-  const salesByCategory = calculateSalesByCategory();
   const salesByPeriod = calculateSalesByPeriod();
+  const salesByProduct = calculateSalesByProduct();
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-IN', {
@@ -170,26 +166,6 @@ export default function Analytics() {
       );
     }
     return null;
-  };
-
-  const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
-    const RADIAN = Math.PI / 180;
-    const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
-    const x = cx + radius * Math.cos(-midAngle * RADIAN);
-    const y = cy + radius * Math.sin(-midAngle * RADIAN);
-  
-    return (
-      <text 
-        x={x} 
-        y={y} 
-        fill="white" 
-        textAnchor={x > cx ? 'start' : 'end'} 
-        dominantBaseline="central"
-        fontSize={isSmallMobile ? 8 : 12}
-      >
-        {isSmallMobile && percent < 0.05 ? '' : `${(percent * 100).toFixed(0)}%`}
-      </text>
-    );
   };
 
   const StatCard = ({ 
@@ -338,72 +314,20 @@ export default function Analytics() {
               </div>
             </CardContent>
           </Card>
-          
           <Card>
             <CardHeader className={cn(isSmallMobile && "p-3")}>
               <CardTitle className={cn(isSmallMobile ? "text-base" : "text-lg")}>
-                Revenue by Category
+                Top Selling Products
               </CardTitle>
               <CardDescription className={cn(isSmallMobile && "text-xs")}>
-                Distribution of sales by product category
-              </CardDescription>
-            </CardHeader>
-            <CardContent className={cn(isSmallMobile && "p-3")}>
-              <div className={cn("h-[300px]", isMobile && "h-[250px]")}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={salesByCategory}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={renderCustomizedLabel}
-                      outerRadius={isSmallMobile ? 70 : 80}
-                      fill="#8884d8"
-                      dataKey="amount"
-                    >
-                      {salesByCategory.map((entry, index) => (
-                        <Cell 
-                          key={`cell-${index}`} 
-                          fill={COLORS[index % COLORS.length]} 
-                        />
-                      ))}
-                    </Pie>
-                    <Legend 
-                      layout={isSmallMobile ? "horizontal" : "vertical"}
-                      verticalAlign={isSmallMobile ? "bottom" : "middle"}
-                      align={isSmallMobile ? "center" : "right"}
-                      formatter={(value) => {
-                        // Truncate long category names on small screens
-                        if (isSmallMobile && value.length > 10) {
-                          return `${value.substring(0, 8)}...`;
-                        }
-                        return value;
-                      }}
-                    />
-                    <Tooltip 
-                      formatter={(value) => formatCurrency(Number(value))}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className={cn(isSmallMobile && "p-3")}>
-              <CardTitle className={cn(isSmallMobile ? "text-base" : "text-lg")}>
-                Top Selling Categories
-              </CardTitle>
-              <CardDescription className={cn(isSmallMobile && "text-xs")}>
-                Revenue by product category
+                Revenue by product
               </CardDescription>
             </CardHeader>
             <CardContent className={cn(isSmallMobile && "p-3")}>
               <div className={cn("h-[300px]", isMobile && "h-[250px]")}>
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
-                    data={salesByCategory.slice(0, isSmallMobile ? 5 : 7)}
+                    data={salesByProduct.slice(0, isSmallMobile ? 5 : 7)}
                     layout="vertical"
                     margin={{
                       top: 5,
@@ -420,10 +344,9 @@ export default function Analytics() {
                     />
                     <YAxis 
                       type="category" 
-                      dataKey="category" 
+                      dataKey="name" 
                       tick={{ fontSize: isSmallMobile ? 10 : 12 }}
                       tickFormatter={(value) => {
-                        // Truncate long category names on small screens
                         if (isSmallMobile && value.length > 10) {
                           return `${value.substring(0, 8)}...`;
                         }

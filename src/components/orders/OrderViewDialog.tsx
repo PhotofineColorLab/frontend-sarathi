@@ -70,10 +70,8 @@ export function OrderViewDialog({
   const getOrderId = (order: Order) => order._id || '';
   const getDisplayOrderId = (order: Order) => {
     if (order.orderNumber) {
-      console.log('OrderView - Using orderNumber:', order.orderNumber);
       return order.orderNumber;
     } else {
-      console.log('OrderView - No orderNumber found, using ID:', order._id);
       return `#${(order._id || '').substring(0, 8)}`;
     }
   };

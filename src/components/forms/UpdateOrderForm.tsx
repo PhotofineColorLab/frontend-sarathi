@@ -77,6 +77,23 @@ export default function UpdateOrderForm({ order, onSuccess, onCancel }: UpdateOr
   const [productSearch, setProductSearch] = useState('');
   const [showProductResults, setShowProductResults] = useState(false);
   
+  // Ref for detecting clicks outside the search dropdown
+  const searchRef = React.useRef<HTMLDivElement>(null);
+  
+  // Close search results when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+        setShowProductResults(false);
+      }
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+  
   // Fetch products from API when component mounts
   useEffect(() => {
     const loadProducts = async () => {
@@ -162,8 +179,7 @@ export default function UpdateOrderForm({ order, onSuccess, onCancel }: UpdateOr
         const productWithSku = product as (Product & { sku?: string });
         
         return product.name.toLowerCase().includes(productSearch.toLowerCase()) ||
-          (productWithSku.sku && typeof productWithSku.sku === 'string' && productWithSku.sku.toLowerCase().includes(productSearch.toLowerCase())) ||
-          (product.category && product.category.toLowerCase().includes(productSearch.toLowerCase()));
+          (productWithSku.sku && typeof productWithSku.sku === 'string' && productWithSku.sku.toLowerCase().includes(productSearch.toLowerCase()));
       });
 
   // Add item to order
@@ -293,27 +309,29 @@ export default function UpdateOrderForm({ order, onSuccess, onCancel }: UpdateOr
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 px-2 sm:px-0">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div>
-          <h2 className="text-2xl font-bold">Update Order</h2>
-          <p className="text-muted-foreground">Edit the existing order details</p>
+          <h2 className="text-xl sm:text-2xl font-bold">Update Order</h2>
+          <p className="text-sm text-muted-foreground">Edit the existing order details</p>
         </div>
         <Button
           variant="outline"
+          size="sm"
           onClick={onCancel || (() => navigate('/orders'))}
+          className="sm:self-start"
         >
           Cancel
         </Button>
       </div>
       
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-6">
-              {/* Customer Information */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-medium">Customer Information</h3>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <div className="grid grid-cols-1 gap-6">
+            {/* Customer Information */}
+            <div className="space-y-4">
+              <h3 className="text-md sm:text-lg font-medium">Customer Information</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
                   name="customerName"
@@ -341,60 +359,60 @@ export default function UpdateOrderForm({ order, onSuccess, onCancel }: UpdateOr
                     </FormItem>
                   )}
                 />
-                
-                <FormField
-                  control={form.control}
-                  name="customerEmail"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email (Optional)</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Enter email address" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="notes"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Notes (Optional)</FormLabel>
-                      <FormControl>
-                        <Textarea 
-                          placeholder="Enter any additional notes"
-                          className="min-h-[100px]"
-                          {...field} 
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                {/* Order Image Display */}
-                {imagePreview && (
-                  <div className="space-y-2">
-                    <FormLabel>Order Image</FormLabel>
-                    <div className="relative w-full h-32">
-                      <img 
-                        src={imagePreview} 
-                        alt="Order Preview" 
-                        className="w-full h-full object-contain rounded-md border" 
-                      />
-                    </div>
-                  </div>
-                )}
               </div>
+              
+              <FormField
+                control={form.control}
+                name="customerEmail"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email (Optional)</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter email address" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="notes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Notes (Optional)</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        placeholder="Enter any additional notes"
+                        className="min-h-[80px]"
+                        {...field} 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              {/* Order Image Display */}
+              {imagePreview && (
+                <div className="space-y-2">
+                  <FormLabel>Order Image</FormLabel>
+                  <div className="relative w-full h-32">
+                    <img 
+                      src={imagePreview} 
+                      alt="Order Preview" 
+                      className="w-full h-full object-contain rounded-md border" 
+                    />
+                  </div>
+                </div>
+              )}
             </div>
             
-            <div className="space-y-6">
-              {/* Order Settings */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-medium">Order Settings</h3>
-                
+            {/* Order Settings */}
+            <div className="space-y-4">
+              <h3 className="text-md sm:text-lg font-medium">Order Settings</h3>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
                   name="status"
@@ -417,49 +435,6 @@ export default function UpdateOrderForm({ order, onSuccess, onCancel }: UpdateOr
                           <SelectItem value="dispatched">Dispatched</SelectItem>
                         </SelectContent>
                       </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="paymentCondition"
-                  render={({ field }) => (
-                    <FormItem className="space-y-3">
-                      <FormLabel>Payment Condition</FormLabel>
-                      <FormControl>
-                        <RadioGroup
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                          className="flex space-x-4"
-                        >
-                          <FormItem className="flex items-center space-x-2 space-y-0">
-                            <FormControl>
-                              <RadioGroupItem value="immediate" />
-                            </FormControl>
-                            <FormLabel className="font-normal">
-                              Immediate
-                            </FormLabel>
-                          </FormItem>
-                          <FormItem className="flex items-center space-x-2 space-y-0">
-                            <FormControl>
-                              <RadioGroupItem value="days15" />
-                            </FormControl>
-                            <FormLabel className="font-normal">
-                              15 Days
-                            </FormLabel>
-                          </FormItem>
-                          <FormItem className="flex items-center space-x-2 space-y-0">
-                            <FormControl>
-                              <RadioGroupItem value="days30" />
-                            </FormControl>
-                            <FormLabel className="font-normal">
-                              30 Days
-                            </FormLabel>
-                          </FormItem>
-                        </RadioGroup>
-                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -497,38 +472,82 @@ export default function UpdateOrderForm({ order, onSuccess, onCancel }: UpdateOr
                   )}
                 />
               </div>
+              
+              <FormField
+                control={form.control}
+                name="paymentCondition"
+                render={({ field }) => (
+                  <FormItem className="space-y-3">
+                    <FormLabel>Payment Condition</FormLabel>
+                    <FormControl>
+                      <RadioGroup
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                        className="flex flex-wrap gap-4"
+                      >
+                        <FormItem className="flex items-center space-x-2 space-y-0">
+                          <FormControl>
+                            <RadioGroupItem value="immediate" />
+                          </FormControl>
+                          <FormLabel className="font-normal">
+                            Immediate
+                          </FormLabel>
+                        </FormItem>
+                        <FormItem className="flex items-center space-x-2 space-y-0">
+                          <FormControl>
+                            <RadioGroupItem value="days15" />
+                          </FormControl>
+                          <FormLabel className="font-normal">
+                            15 Days
+                          </FormLabel>
+                        </FormItem>
+                        <FormItem className="flex items-center space-x-2 space-y-0">
+                          <FormControl>
+                            <RadioGroupItem value="days30" />
+                          </FormControl>
+                          <FormLabel className="font-normal">
+                            30 Days
+                          </FormLabel>
+                        </FormItem>
+                      </RadioGroup>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
-              {/* Order Items */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-medium">Order Items</h3>
-                
-                <div className="space-y-2">
-                  <div className="relative">
-                    <div className="flex items-center border rounded-md">
-                      <div className="relative flex-1">
-                        <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                        <Input
-                          placeholder="Search products by name, category, or SKU..."
-                          className="pl-8 border-0 focus-visible:ring-0"
-                          value={productSearch}
-                          onChange={(e) => {
-                            setProductSearch(e.target.value);
-                            setShowProductResults(true);
-                          }}
-                          onFocus={() => setShowProductResults(true)}
-                        />
-                      </div>
+            {/* Order Items */}
+            <div className="space-y-4">
+              <h3 className="text-md sm:text-lg font-medium">Order Items</h3>
+              
+              <div className="space-y-2">
+                <div className="relative" ref={searchRef}>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <div className="relative flex-1">
+                      <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        placeholder="Search products..."
+                        className="pl-8"
+                        value={productSearch}
+                        onChange={(e) => {
+                          setProductSearch(e.target.value);
+                          setShowProductResults(true);
+                        }}
+                        onFocus={() => setShowProductResults(true)}
+                      />
+                    </div>
+                    <div className="flex">
                       <Input
                         type="number"
                         min="1"
                         value={quantity}
                         onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
                         placeholder="Qty"
-                        className="w-20 h-10 border-0 focus-visible:ring-0 border-l rounded-none"
+                        className="w-full sm:w-20 rounded-r-none"
                       />
                       <Button
                         type="button"
-                        size="sm"
                         className="rounded-l-none"
                         onClick={handleAddItem}
                         disabled={!selectedProduct}
@@ -536,123 +555,122 @@ export default function UpdateOrderForm({ order, onSuccess, onCancel }: UpdateOr
                         Add
                       </Button>
                     </div>
-                    
-                    {/* Search results */}
-                    {showProductResults && productSearch && (
-                      <div className="absolute w-full z-10 mt-1 border rounded-md bg-background shadow-lg">
-                        <ScrollArea className="h-60">
-                          {isLoadingProducts ? (
-                            <div className="p-4 text-center">
-                              <Loader2 className="h-5 w-5 mx-auto animate-spin text-muted-foreground" />
-                              <p className="text-sm text-muted-foreground mt-2">Loading products...</p>
-                            </div>
-                          ) : filteredProducts.length === 0 ? (
-                            <div className="p-4 text-center text-muted-foreground">
-                              No products found
-                            </div>
-                          ) : (
-                            <div>
-                              {filteredProducts.map((product) => {
-                                // Type assertion for product in the UI
-                                const productWithSku = product as (Product & { sku?: string });
-                                
-                                return (
-                                  <div
-                                    key={product._id || product.id}
-                                    className={cn(
-                                      "flex items-center justify-between p-3 cursor-pointer hover:bg-muted transition-colors",
-                                      product.stock <= 0 && "opacity-50"
-                                    )}
-                                    onClick={() => product.stock > 0 && handleSelectProduct(product)}
-                                  >
-                                    <div>
-                                      <div className="font-medium">{product.name}</div>
-                                      <div className="text-sm text-muted-foreground">
-                                        {product.category} {productWithSku.sku && `• SKU: ${productWithSku.sku}`}
-                                      </div>
-                                    </div>
-                                    <div className="text-right">
-                                      <div>₹{product.price.toFixed(2)}</div>
-                                      <div className={cn(
-                                        "text-xs",
-                                        product.stock <= 5 ? "text-destructive" : "text-muted-foreground"
-                                      )}>
-                                        Stock: {product.stock}
-                                      </div>
+                  </div>
+                  
+                  {/* Search results */}
+                  {showProductResults && productSearch && (
+                    <div className="absolute w-full z-10 mt-1 border rounded-md bg-background shadow-lg">
+                      <ScrollArea className="h-60">
+                        {isLoadingProducts ? (
+                          <div className="p-4 text-center">
+                            <Loader2 className="h-5 w-5 mx-auto animate-spin text-muted-foreground" />
+                            <p className="text-sm text-muted-foreground mt-2">Loading products...</p>
+                          </div>
+                        ) : filteredProducts.length === 0 ? (
+                          <div className="p-4 text-center text-muted-foreground">
+                            No products found
+                          </div>
+                        ) : (
+                          <div>
+                            {filteredProducts.map((product) => {
+                              // Type assertion for product in the UI
+                              const productWithSku = product as (Product & { sku?: string });
+                              
+                              return (
+                                <div
+                                  key={product._id || product.id}
+                                  className={cn(
+                                    "flex items-center justify-between p-3 cursor-pointer hover:bg-muted transition-colors",
+                                    product.stock <= 0 && "opacity-50"
+                                  )}
+                                  onClick={() => product.stock > 0 && handleSelectProduct(product)}
+                                >
+                                  <div>
+                                    <div className="font-medium">{product.name}</div>
+                                  </div>
+                                  <div className="text-right">
+                                    <div>₹{product.price.toFixed(2)}</div>
+                                    <div className={cn(
+                                      "text-xs",
+                                      product.stock <= 5 ? "text-destructive" : "text-muted-foreground"
+                                    )}>
+                                      Stock: {product.stock}
                                     </div>
                                   </div>
-                                );
-                              })}
-                            </div>
-                          )}
-                        </ScrollArea>
-                      </div>
-                    )}
-                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </ScrollArea>
+                    </div>
+                  )}
                 </div>
-                
-                {orderItems.length > 0 ? (
-                  <Card>
-                    <CardContent className="p-0">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Product</TableHead>
-                            <TableHead className="text-center">Qty</TableHead>
-                            <TableHead className="text-right">Price</TableHead>
-                            <TableHead className="text-right">Total</TableHead>
-                            <TableHead></TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {orderItems.map((item) => (
-                            <TableRow key={item.id}>
-                              <TableCell>{item.productName}</TableCell>
-                              <TableCell className="text-center">{item.quantity}</TableCell>
-                              <TableCell className="text-right">₹{item.price.toFixed(2)}</TableCell>
-                              <TableCell className="text-right">₹{(item.price * item.quantity).toFixed(2)}</TableCell>
-                              <TableCell className="text-right">
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => handleRemoveItem(item.id)}
-                                >
-                                  <Trash2 className="h-4 w-4 text-destructive" />
-                                </Button>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </CardContent>
-                  </Card>
-                ) : (
-                  <div className="text-center py-6 border rounded-md border-dashed">
-                    <p className="text-muted-foreground">No items added yet</p>
-                  </div>
-                )}
-                
-                {orderItems.length > 0 && (
-                  <div className="flex justify-between items-center pt-4 border-t">
-                    <span className="text-lg font-medium">Total Amount:</span>
-                    <span className="text-xl font-bold">₹{calculateTotal().toFixed(2)}</span>
-                  </div>
-                )}
               </div>
+              
+              {orderItems.length > 0 ? (
+                <Card>
+                  <CardContent className="p-0 overflow-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Product</TableHead>
+                          <TableHead className="text-center">Qty</TableHead>
+                          <TableHead className="text-right">Price</TableHead>
+                          <TableHead className="text-right">Total</TableHead>
+                          <TableHead></TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {orderItems.map((item) => (
+                          <TableRow key={item.id}>
+                            <TableCell className="max-w-[120px] sm:max-w-none truncate">{item.productName}</TableCell>
+                            <TableCell className="text-center">{item.quantity}</TableCell>
+                            <TableCell className="text-right">₹{item.price.toFixed(2)}</TableCell>
+                            <TableCell className="text-right">₹{(item.price * item.quantity).toFixed(2)}</TableCell>
+                            <TableCell className="text-right p-0 pr-2">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleRemoveItem(item.id)}
+                              >
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="text-center py-6 border rounded-md border-dashed">
+                  <p className="text-muted-foreground">No items added yet</p>
+                </div>
+              )}
+              
+              {orderItems.length > 0 && (
+                <div className="flex justify-between items-center pt-4 border-t">
+                  <span className="text-lg font-medium">Total Amount:</span>
+                  <span className="text-xl font-bold">₹{calculateTotal().toFixed(2)}</span>
+                </div>
+              )}
             </div>
           </div>
           
-          <div className="flex justify-end gap-4">
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 mt-6">
             <Button
               type="button"
               variant="outline"
+              className="w-full sm:w-auto"
               onClick={onCancel || (() => navigate('/orders'))}
             >
               Cancel
             </Button>
             <Button
               type="submit"
+              className="w-full sm:w-auto"
               disabled={isLoading}
             >
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

@@ -29,19 +29,6 @@ export interface AttendanceRecord {
   remarks?: string;
 }
 
-// Product Types
-export type ProductCategory = 
-  | 'fans' 
-  | 'lights' 
-  | 'switches' 
-  | 'sockets' 
-  | 'wires' 
-  | 'conduits'
-  | 'mcbs'
-  | 'panels'
-  | 'tools'
-  | 'accessories';
-
 export type ProductDimension = 'Bag' | 'Bundle' | 'Box' | 'Coils' | 'Dozen' | 'Ft' | 'Gross' | 'Kg' | 'Mtr' | 'Pc' | 'Pkt' | 'Set' | 'Not Applicable';
 
 export interface Product {
@@ -97,11 +84,6 @@ export interface Order {
 }
 
 // Analytics Types
-export interface SalesByCategory {
-  category: ProductCategory;
-  amount: number;
-}
-
 export interface SalesByPeriod {
   date: string;
   amount: number;

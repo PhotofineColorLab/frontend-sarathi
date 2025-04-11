@@ -5,12 +5,10 @@ import {
   Package, 
   Users, 
   BarChart4, 
-  Settings, 
   LogOut, 
   Menu, 
   X, 
   ChevronRight, 
-  ShoppingCart,
   ChevronLeft,
   Box
 } from 'lucide-react';

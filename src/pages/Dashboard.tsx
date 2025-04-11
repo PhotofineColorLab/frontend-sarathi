@@ -21,16 +21,13 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const { addNotification } = useNotifications();
   
-  // Add responsive hooks
   const isMobile = useIsMobile();
   const isSmallMobile = useIsSmallMobile();
   
-  // Fetch data from API
   useEffect(() => {
     const loadData = async () => {
       setIsLoading(true);
       try {
-        // Fetch all orders and products in parallel
         const [ordersData, productsData] = await Promise.all([
           fetchOrders(),
           fetchProducts()
@@ -39,10 +36,8 @@ export default function Dashboard() {
         setOrders(ordersData);
         setProducts(productsData);
         
-        // Add a notification if we find any products with low stock
         const lowStockItems = productsData.filter(p => p.stock < 15);
         if (lowStockItems.length > 0) {
-          // Create a real notification for low stock products
           addNotification({
             type: 'product',
             title: 'Low Stock Alert',
@@ -59,9 +54,8 @@ export default function Dashboard() {
     };
     
     loadData();
-  }, []);
+  }, [addNotification]);
   
-  // Calculate analytics from real data
   const calculateAnalytics = () => {
     if (!orders.length) return {
       totalSales: 0,
@@ -83,7 +77,6 @@ export default function Dashboard() {
     };
   };
 
-  // Sort the orders by createdAt date, most recent first
   const recentOrders = [...orders].sort((a, b) => 
     new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   );
@@ -102,7 +95,6 @@ export default function Dashboard() {
     }).format(value);
   };
 
-  // Navigation handlers
   const navigateToOrders = () => {
     navigate('/orders');
   };
@@ -227,7 +219,6 @@ export default function Dashboard() {
 
         <div className="grid grid-cols-1 gap-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Recent Orders - Now showing truly recent orders */}
             {!isExecutive && (
               <Card className="dashboard-card animate-slide-in-bottom" style={{ animationDelay: '600ms' }}>
                 <CardHeader className={cn(isSmallMobile && "p-3")}>
@@ -294,7 +285,6 @@ export default function Dashboard() {
               </Card>
             )}
             
-            {/* Low Stock Products */}
             {isAdmin ? (
               <Card className="dashboard-card animate-slide-in-bottom" style={{ animationDelay: '700ms' }}>
                 <CardHeader className={cn(isSmallMobile && "p-3")}>
@@ -319,7 +309,6 @@ export default function Dashboard() {
                         "rounded-md border", 
                         isSmallMobile ? "text-sm" : ""
                       )}>
-                        {/* Table header - adjust column widths for mobile */}
                         <div className={cn(
                           "grid gap-2 p-3 bg-muted/50",
                           isSmallMobile ? "grid-cols-8" : "grid-cols-10"

@@ -12,7 +12,15 @@ import { MarkPaidDialog } from '@/components/orders/MarkPaidDialog';
 import { Order, OrderStatus } from '@/lib/types';
 import OrderForm from '@/components/forms/OrderForm';
 import { PaginationWrapper } from '@/components/ui/pagination-wrapper';
-import { fetchOrders, fetchOrdersByDateRange, fetchOrdersByAssignedTo, fetchOrdersByCreator, deleteOrder, updateOrder, markOrderAsPaid } from '@/lib/api';
+import { 
+  fetchOrders, 
+  fetchOrdersByDateRange, 
+  fetchOrdersByAssignedTo, 
+  fetchOrdersByCreator, 
+  deleteOrder, 
+  updateOrder, 
+  markOrderAsPaid 
+} from '@/lib/api';
 import { isAfter, isBefore, isEqual, startOfDay, format } from 'date-fns';
 import { useAuth } from '@/contexts/AuthContext';
 import { useIsMobile, useIsSmallMobile } from '@/hooks/use-mobile';
@@ -51,7 +59,6 @@ export default function Orders() {
     loadOrders();
   }, [activeTab]);
   
-  // Reload orders when date range changes (but only if both from and to are set)
   useEffect(() => {
     if (dateRange.from && dateRange.to) {
       loadOrders();
@@ -61,48 +68,35 @@ export default function Orders() {
   const loadOrders = async () => {
     setIsLoading(true);
     try {
-      console.log("Loading orders with status:", activeTab);
-      
       let fetchedOrders;
       
-      // If date range is selected, use that API instead of status filter
       if (dateRange.from && dateRange.to) {
         fetchedOrders = await fetchOrdersByDateRange(dateRange.from, dateRange.to);
       } 
-      // If my-orders is selected, fetch orders assigned to current user
       else if (activeTab === 'my-orders' && user) {
-        // Use _id if available, otherwise use id
         const userId = user._id || user.id;
         if (userId) {
-          console.log("Fetching orders for user:", userId);
           fetchedOrders = await fetchOrdersByAssignedTo(userId);
         } else {
-          console.error("User ID not found:", user);
           toast.error("Could not determine user ID for assignments");
           fetchedOrders = await fetchOrders();
         }
       }
-      // For executive users, only show orders they created
       else if (user && user.role === 'executive') {
         const userId = user._id || user.id;
         if (userId) {
-          console.log("Executive user - fetching orders created by:", userId);
           fetchedOrders = await fetchOrdersByCreator(userId);
-          // Filter by status if not 'all'
           if (activeTab !== 'all') {
             fetchedOrders = fetchedOrders.filter(order => order.status === activeTab);
           }
         } else {
-          console.error("User ID not found:", user);
           toast.error("Could not determine user ID");
           fetchedOrders = [];
         }
       }
-      // Otherwise fetch by status
       else {
         fetchedOrders = await fetchOrders(activeTab === 'all' ? undefined : activeTab);
         
-        // For staff members (non-admin), filter out orders that aren't assigned to them or to all
         if (user && user.role !== 'admin') {
           const userId = user._id || user.id;
           fetchedOrders = fetchedOrders.filter(order => 
@@ -127,7 +121,6 @@ export default function Orders() {
     }).format(value);
   };
 
-  // Date filter helper function
   const isWithinDateRange = (date: Date, from?: Date, to?: Date): boolean => {
     if (!from) return true;
     
@@ -145,7 +138,6 @@ export default function Orders() {
     setIsUpdateLoading(true);
     
     try {
-      // Set dispatchDate if status is changing to dispatched
       const updates: any = { status };
       if (status === 'dispatched') {
         updates.dispatchDate = new Date();
@@ -178,7 +170,6 @@ export default function Orders() {
       
       toast.success('Order marked as paid');
       
-      // Add notification when an order is marked as paid
       addNotification({
         type: 'order',
         title: 'Order Marked as Paid',
@@ -197,7 +188,6 @@ export default function Orders() {
     try {
       await deleteOrder(orderId);
       
-      // Find the order before removing it from the state
       const orderToDelete = orders.find(order => order._id === orderId);
       const orderNumber = orderToDelete?.orderNumber || orderId.substring(0, 8);
       
@@ -205,7 +195,6 @@ export default function Orders() {
       setIsDeleteDialogOpen(false);
       toast.success('Order deleted successfully');
       
-      // Add notification when an order is deleted
       addNotification({
         type: 'order',
         title: 'Order Deleted',
@@ -224,14 +213,12 @@ export default function Orders() {
   };
 
   const filteredOrders = orders.filter(order => {
-    // First filter by search term
     const matchesSearch = searchTerm === '' 
       ? true 
       : order.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (order._id && order._id.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (order.orderNumber && order.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()));
     
-    // Then filter by date range - checking only createdAt
     const matchesDateRange = dateRange.from 
       ? isWithinDateRange(new Date(order.createdAt), dateRange.from, dateRange.to)
       : true;
@@ -239,7 +226,6 @@ export default function Orders() {
     return matchesSearch && matchesDateRange;
   });
 
-  // Add a mobile-optimized card view for orders
   const OrderCard = React.memo(({ 
     order, 
     onViewOrder, 

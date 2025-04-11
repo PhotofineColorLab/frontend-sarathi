@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LockKeyhole, Mail } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,13 +7,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/AuthContext';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { useEffect } from 'react';
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const { login, isAuthenticated, isLoading } = useAuth();
+  const { login, isAuthenticated, loading } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -32,12 +31,9 @@ export default function Login() {
     }
     
     try {
-      const success = await login(email, password);
-      if (!success) {
-        setError('Invalid email or password');
-      }
+      await login(email, password);
     } catch (err) {
-      setError('An error occurred during login');
+      setError('Invalid email or password');
     }
   };
 
@@ -45,12 +41,9 @@ export default function Login() {
     setEmail('admin@electrical.com');
     setPassword('admin123');
     try {
-      const success = await login('admin@electrical.com', 'admin123');
-      if (!success) {
-        setError('Failed to login with admin credentials. Make sure the server is running.');
-      }
+      await login('admin@electrical.com', 'admin123');
     } catch (err) {
-      setError('An error occurred during login');
+      setError('Failed to login with admin credentials. Make sure the server is running.');
     }
   };
 
@@ -105,8 +98,8 @@ export default function Login() {
               </div>
             </CardContent>
             <CardFooter>
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? 'Signing in...' : 'Sign In'}
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? 'Signing in...' : 'Sign In'}
               </Button>
             </CardFooter>
           </form>
@@ -121,7 +114,7 @@ export default function Login() {
               variant="outline" 
               className="w-full mt-4" 
               onClick={loginAsAdmin}
-              disabled={isLoading}
+              disabled={loading}
             >
               Login as Admin
             </Button>
