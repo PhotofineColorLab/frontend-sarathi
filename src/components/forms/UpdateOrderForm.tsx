@@ -72,7 +72,7 @@ export default function UpdateOrderForm({ order, onSuccess, onCancel }: UpdateOr
   const [imagePreview, setImagePreview] = useState<string | null>(order.orderImage || null);
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<string>('');
-  const [quantity, setQuantity] = useState<number>(1);
+  const [quantity, setQuantity] = useState<string>('');
   const [staffMembers, setStaffMembers] = useState<User[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoadingProducts, setIsLoadingProducts] = useState(true);
@@ -188,7 +188,8 @@ export default function UpdateOrderForm({ order, onSuccess, onCancel }: UpdateOr
 
   // Add item to order
   const handleAddItem = () => {
-    if (!selectedProduct || quantity <= 0) return;
+    const quantityValue = parseInt(quantity) || 0;
+    if (!selectedProduct || quantityValue <= 0) return;
     
     const product = products.find(p => (p._id || p.id) === selectedProduct);
     if (!product) return;
@@ -199,7 +200,7 @@ export default function UpdateOrderForm({ order, onSuccess, onCancel }: UpdateOr
     if (existingItemIndex >= 0) {
       // Update the existing item
       const updatedItems = [...orderItems];
-      updatedItems[existingItemIndex].quantity += quantity;
+      updatedItems[existingItemIndex].quantity += quantityValue;
       setOrderItems(updatedItems);
     } else {
       // Add new item
@@ -207,7 +208,7 @@ export default function UpdateOrderForm({ order, onSuccess, onCancel }: UpdateOr
         id: Math.random().toString(36).substring(2, 9),
         productId: product._id || product.id,
         productName: product.name,
-        quantity: quantity,
+        quantity: quantityValue,
         price: product.price,
       };
       setOrderItems([...orderItems, newItem]);
@@ -216,7 +217,7 @@ export default function UpdateOrderForm({ order, onSuccess, onCancel }: UpdateOr
     // Reset selection
     setSelectedProduct('');
     setProductSearch('');
-    setQuantity(1);
+    setQuantity('');
     setShowProductResults(false);
   };
 
@@ -581,9 +582,9 @@ export default function UpdateOrderForm({ order, onSuccess, onCancel }: UpdateOr
                     <div className="flex">
                       <Input
                         type="number"
-                        min="1"
+                        min="0"
                         value={quantity}
-                        onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
+                        onChange={(e) => setQuantity(e.target.value)}
                         placeholder="Qty"
                         className="w-full sm:w-20 rounded-r-none"
                       />
