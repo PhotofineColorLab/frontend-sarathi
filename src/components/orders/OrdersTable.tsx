@@ -99,17 +99,11 @@ export function OrdersTable({
                 </div>
               </TableCell>
               <TableCell>
-                {order.priority && (
+                {order.priority === 'urgent' && (
                   <Badge
-                    className={cn(
-                      "text-xs py-0 h-5",
-                      order.priority === 'high' ? "bg-red-100 text-red-800 hover:bg-red-100" :
-                      order.priority === 'medium' ? "bg-yellow-100 text-yellow-800 hover:bg-yellow-100" :
-                      "bg-green-100 text-green-800 hover:bg-green-100"
-                    )}
+                    className="bg-red-100 text-red-800 hover:bg-red-100 text-xs py-0 h-5"
                   >
-                    {order.priority === 'high' ? "High" : 
-                     order.priority === 'medium' ? "Medium" : "Low"}
+                    Urgent
                   </Badge>
                 )}
               </TableCell>

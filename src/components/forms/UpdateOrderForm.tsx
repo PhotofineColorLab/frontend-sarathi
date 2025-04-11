@@ -35,7 +35,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
-import { Order, OrderStatus, PaymentCondition, Product, OrderItem, User } from '@/lib/types';
+import { Order, OrderStatus, PaymentCondition, Product, OrderItem, User, OrderPriority } from '@/lib/types';
 import { updateOrder, updateOrderWithImage, fetchStaff, fetchProducts } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -50,6 +50,7 @@ const orderFormSchema = z.object({
   customerAddress: z.string().optional().or(z.literal('')),
   status: z.enum(['pending', 'dc', 'invoice', 'dispatched']),
   paymentCondition: z.enum(['immediate', 'days15', 'days30']),
+  priority: z.enum(['urgent', 'normal']),
   assignedTo: z.string().optional(),
   notes: z.string().optional(),
 });
@@ -153,6 +154,7 @@ export default function UpdateOrderForm({ order, onSuccess, onCancel }: UpdateOr
       customerAddress: order.customerAddress || '',
       status: order.status as OrderStatus,
       paymentCondition: order.paymentCondition as PaymentCondition || 'immediate',
+      priority: order.priority as OrderPriority || 'normal',
       assignedTo: order.assignedTo || 'all',
       notes: order.notes || '',
     },
@@ -264,6 +266,7 @@ export default function UpdateOrderForm({ order, onSuccess, onCancel }: UpdateOr
         customerAddress: values.customerAddress || '',
         status: values.status,
         paymentCondition: values.paymentCondition,
+        priority: values.priority,
         assignedTo: values.assignedTo === 'all' ? null : values.assignedTo,
         notes: values.notes || '',
         items: sanitizedItems,
@@ -510,6 +513,41 @@ export default function UpdateOrderForm({ order, onSuccess, onCancel }: UpdateOr
                           </FormControl>
                           <FormLabel className="font-normal">
                             30 Days
+                          </FormLabel>
+                        </FormItem>
+                      </RadioGroup>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="priority"
+                render={({ field }) => (
+                  <FormItem className="space-y-3">
+                    <FormLabel>Urgent Order?</FormLabel>
+                    <FormControl>
+                      <RadioGroup
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                        className="flex flex-wrap gap-4"
+                      >
+                        <FormItem className="flex items-center space-x-2 space-y-0">
+                          <FormControl>
+                            <RadioGroupItem value="urgent" />
+                          </FormControl>
+                          <FormLabel className="font-normal">
+                            Yes
+                          </FormLabel>
+                        </FormItem>
+                        <FormItem className="flex items-center space-x-2 space-y-0">
+                          <FormControl>
+                            <RadioGroupItem value="normal" />
+                          </FormControl>
+                          <FormLabel className="font-normal">
+                            No
                           </FormLabel>
                         </FormItem>
                       </RadioGroup>

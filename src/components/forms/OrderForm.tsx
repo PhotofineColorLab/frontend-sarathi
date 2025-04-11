@@ -63,7 +63,7 @@ const orderFormSchema = z.object({
   customerAddress: z.string().optional().or(z.literal('')),
   status: z.enum(['pending', 'dc', 'invoice', 'dispatched']),
   paymentCondition: z.enum(['immediate', 'days15', 'days30']),
-  priority: z.enum(['high', 'medium', 'low']),
+  priority: z.enum(['urgent', 'normal']),
   assignedTo: z.string().optional(),
   notes: z.string().optional(),
 });
@@ -186,7 +186,7 @@ export default function OrderForm({ onSuccess, initialOrder, onCancel }: OrderFo
       customerAddress: initialOrder?.customerAddress || '',
       status: (initialOrder?.status as OrderStatus) || 'pending',
       paymentCondition: (initialOrder?.paymentCondition as PaymentCondition) || 'immediate',
-      priority: (initialOrder?.priority as OrderPriority) || 'medium',
+      priority: (initialOrder?.priority as OrderPriority) || 'normal',
       assignedTo: initialOrder?.assignedTo || 'all',
       notes: initialOrder?.notes || '',
     },
@@ -659,7 +659,7 @@ export default function OrderForm({ onSuccess, initialOrder, onCancel }: OrderFo
                   name="priority"
                   render={({ field }) => (
                     <FormItem className="space-y-3">
-                      <FormLabel>Order Priority</FormLabel>
+                      <FormLabel>Urgent Order?</FormLabel>
                       <FormControl>
                         <RadioGroup
                           onValueChange={field.onChange}
@@ -668,26 +668,18 @@ export default function OrderForm({ onSuccess, initialOrder, onCancel }: OrderFo
                         >
                           <FormItem className="flex items-center space-x-2 space-y-0">
                             <FormControl>
-                              <RadioGroupItem value="high" />
+                              <RadioGroupItem value="urgent" />
                             </FormControl>
                             <FormLabel className="font-normal">
-                              High
+                              Yes
                             </FormLabel>
                           </FormItem>
                           <FormItem className="flex items-center space-x-2 space-y-0">
                             <FormControl>
-                              <RadioGroupItem value="medium" />
+                              <RadioGroupItem value="normal" />
                             </FormControl>
                             <FormLabel className="font-normal">
-                              Medium
-                            </FormLabel>
-                          </FormItem>
-                          <FormItem className="flex items-center space-x-2 space-y-0">
-                            <FormControl>
-                              <RadioGroupItem value="low" />
-                            </FormControl>
-                            <FormLabel className="font-normal">
-                              Low
+                              No
                             </FormLabel>
                           </FormItem>
                         </RadioGroup>

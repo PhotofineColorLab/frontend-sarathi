@@ -91,14 +91,12 @@ export function OrderViewDialog({
 
   const getPriorityText = (priority?: string) => {
     switch (priority) {
-      case 'high':
-        return 'High';
-      case 'medium':
-        return 'Medium';
-      case 'low':
-        return 'Low';
+      case 'urgent':
+        return 'Urgent';
+      case 'normal':
+        return 'Normal';
       default:
-        return 'Medium';
+        return 'Normal';
     }
   };
   
