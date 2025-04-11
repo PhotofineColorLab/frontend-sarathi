@@ -1017,6 +1017,7 @@ export default function OrderForm({ onSuccess, initialOrder, onCancel }: OrderFo
                   <SelectItem value="Bag">Bag</SelectItem>
                   <SelectItem value="Bundle">Bundle</SelectItem>
                   <SelectItem value="Box">Box</SelectItem>
+                  <SelectItem value="Carton">Carton</SelectItem>
                   <SelectItem value="Coils">Coils</SelectItem>
                   <SelectItem value="Dozen">Dozen</SelectItem>
                   <SelectItem value="Ft">Ft</SelectItem>

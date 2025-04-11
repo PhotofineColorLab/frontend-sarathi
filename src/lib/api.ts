@@ -262,6 +262,8 @@ export const createProduct = async (productData: Omit<Product, 'id' | '_id' | 'c
     throw new Error('Authentication required');
   }
   
+  console.log('Sending product data:', JSON.stringify(productData, null, 2));
+  
   const response = await fetch(`${API_URL}/products`, {
     method: 'POST',
     headers: {
@@ -273,6 +275,7 @@ export const createProduct = async (productData: Omit<Product, 'id' | '_id' | 'c
 
   if (!response.ok) {
     const error = await response.json();
+    console.error('Product creation error response:', error);
     throw new Error(error.message || 'Failed to create product');
   }
 

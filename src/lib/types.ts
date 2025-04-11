@@ -29,7 +29,7 @@ export interface AttendanceRecord {
   remarks?: string;
 }
 
-export type ProductDimension = 'Bag' | 'Bundle' | 'Box' | 'Coils' | 'Dozen' | 'Ft' | 'Gross' | 'Kg' | 'Mtr' | 'Pc' | 'Pkt' | 'Set' | 'Not Applicable';
+export type ProductDimension = 'Bag' | 'Bundle' | 'Box' | 'Carton' | 'Coils' | 'Dozen' | 'Ft' | 'Gross' | 'Kg' | 'Mtr' | 'Pc' | 'Pkt' | 'Set' | 'Not Applicable';
 
 export interface Product {
   id?: string;
