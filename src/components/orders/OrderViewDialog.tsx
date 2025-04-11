@@ -28,6 +28,8 @@ import { Order, OrderStatus } from '@/lib/types';
 import { OrderStatusBadge } from './OrderStatusBadge';
 import { PaymentStatusBadge } from './PaymentStatusBadge';
 import { fetchStaff } from '@/lib/api';
+import { useIsMobile, useIsTablet } from '@/hooks/use-mobile';
+import { Trash2 } from 'lucide-react';
 
 interface OrderViewDialogProps {
   isOpen: boolean;
@@ -36,6 +38,7 @@ interface OrderViewDialogProps {
   onStatusChange: (orderId: string, status: OrderStatus) => void;
   onMarkPaid?: (orderId: string) => void;
   onEditOrder?: (order: Order) => void;
+  onDeleteOrder?: (order: Order) => void;
   formatCurrency: (value: number) => string;
 }
 
@@ -46,9 +49,13 @@ export function OrderViewDialog({
   onStatusChange,
   onMarkPaid,
   onEditOrder,
+  onDeleteOrder,
   formatCurrency
 }: OrderViewDialogProps) {
   const [staffMembers, setStaffMembers] = useState<any[]>([]);
+  const isMobile = useIsMobile();
+  const isTablet = useIsTablet();
+  const isMobileOrTablet = isMobile || isTablet;
   
   useEffect(() => {
     const loadStaffMembers = async () => {
@@ -121,6 +128,57 @@ export function OrderViewDialog({
         </DialogHeader>
 
         <div className="space-y-6 mt-4">
+          {/* Mobile/Tablet status change options */}
+          {isMobileOrTablet && (
+            <div className="border rounded-md p-4 space-y-4">
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Update Order Status</p>
+                <Select
+                  defaultValue={order.status}
+                  onValueChange={(value) => onStatusChange(getOrderId(order), value as OrderStatus)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="dc">DC Generated</SelectItem>
+                    <SelectItem value="invoice">Invoice Generated</SelectItem>
+                    <SelectItem value="dispatched">Dispatched</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="flex flex-col gap-2">
+                {!order.isPaid && onMarkPaid && (
+                  <Button 
+                    variant="outline" 
+                    className="w-full"
+                    onClick={() => {
+                      onMarkPaid(getOrderId(order));
+                    }}
+                  >
+                    Mark as Paid
+                  </Button>
+                )}
+                
+                {onDeleteOrder && (
+                  <Button 
+                    variant="destructive" 
+                    className="w-full flex items-center justify-center gap-2"
+                    onClick={() => {
+                      onOpenChange(false);
+                      onDeleteOrder(order);
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Delete Order
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
+
           {order.orderImage && (
             <div className="w-full">
               <p className="text-sm font-medium mb-2">Order Image</p>
