@@ -319,25 +319,55 @@ export default function Dashboard() {
                         "rounded-md border", 
                         isSmallMobile ? "text-sm" : ""
                       )}>
-                        <div className="grid grid-cols-10 gap-2 p-3 bg-muted/50">
-                          <div className="col-span-5 text-muted-foreground font-medium text-xs">Product</div>
-                          <div className="col-span-2 text-muted-foreground font-medium text-xs">Price</div>
-                          <div className="col-span-3 text-muted-foreground font-medium text-xs">Stock</div>
+                        {/* Table header - adjust column widths for mobile */}
+                        <div className={cn(
+                          "grid gap-2 p-3 bg-muted/50",
+                          isSmallMobile ? "grid-cols-8" : "grid-cols-10"
+                        )}>
+                          <div className={cn(
+                            "text-muted-foreground font-medium text-xs",
+                            isSmallMobile ? "col-span-4" : "col-span-5"
+                          )}>
+                            Product
+                          </div>
+                          <div className={cn(
+                            "text-muted-foreground font-medium text-xs",
+                            isSmallMobile ? "col-span-2" : "col-span-2"
+                          )}>
+                            Price
+                          </div>
+                          <div className={cn(
+                            "text-muted-foreground font-medium text-xs",
+                            isSmallMobile ? "col-span-2" : "col-span-3"
+                          )}>
+                            Stock
+                          </div>
                         </div>
                         <div className="divide-y">
                           {lowStockProducts.slice(0, isMobile ? 3 : 5).map((product) => (
-                            <div key={product.id || product._id} className="grid grid-cols-10 gap-2 p-3">
-                              <div className="col-span-5 truncate font-medium">
+                            <div key={product.id || product._id} className={cn(
+                              "grid gap-2 p-3",
+                              isSmallMobile ? "grid-cols-8" : "grid-cols-10"
+                            )}>
+                              <div className={cn(
+                                "truncate font-medium",
+                                isSmallMobile ? "col-span-4" : "col-span-5"
+                              )}>
                                 {product.name}
                               </div>
-                              <div className="col-span-2 text-muted-foreground">
+                              <div className={cn(
+                                "text-muted-foreground",
+                                isSmallMobile ? "col-span-2" : "col-span-2"
+                              )}>
                                 {formatCurrency(product.price)}
                               </div>
-                              <div className="col-span-3">
+                              <div className={cn(
+                                isSmallMobile ? "col-span-2" : "col-span-3"
+                              )}>
                                 <Badge 
                                   variant={product.stock === 0 ? "destructive" : "outline"} 
                                   className={cn(
-                                    isSmallMobile && "text-[10px] px-1 py-0 h-5"
+                                    isSmallMobile && "text-[10px] px-1 py-0 h-5 whitespace-nowrap"
                                   )}
                                 >
                                   {product.stock} {product.stock === 1 ? 'item' : 'items'}

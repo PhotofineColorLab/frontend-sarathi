@@ -11,7 +11,6 @@ import {
   ChevronLeft,
   ChevronRight,
   List,
-  Grid,
   PlusCircle,
   Eye,
   Trash,
@@ -59,7 +58,6 @@ import { useIsMobile, useIsSmallMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { EmptyState } from '@/components/ui/empty-state';
-import { ProductCard } from '@/components/cards/ProductCard';
 import { useNavigate } from 'react-router-dom';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -79,8 +77,7 @@ export default function Products() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
-  
+
   // Form states
   const [productName, setProductName] = useState(() => selectedProduct?.name || '');
   const [productPrice, setProductPrice] = useState(() => selectedProduct?.price ? selectedProduct.price.toString() : '');
@@ -89,9 +86,6 @@ export default function Products() {
 
   const isMobile = useIsMobile();
   const isSmallMobile = useIsSmallMobile();
-
-  // Add a state for product view dialog
-  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
 
   const navigate = useNavigate();
 
@@ -168,8 +162,7 @@ export default function Products() {
   };
 
   const handleViewProduct = (product: Product) => {
-    setSelectedProduct(product);
-    setIsViewDialogOpen(true);
+    handleEditProduct(product);
   };
 
   // Function to safely get product ID (supports both MongoDB _id and client-side id)
@@ -345,24 +338,6 @@ export default function Products() {
           </div>
           
           <div className="flex flex-row gap-2 justify-between sm:justify-end">
-            <Button
-              variant="outline"
-              size={isMobile ? "sm" : "default"}
-              onClick={() => setViewMode(viewMode === 'grid' ? 'table' : 'grid')}
-            >
-              {viewMode === 'grid' ? (
-                <>
-                  <List className="h-4 w-4 mr-2" />
-                  {!isSmallMobile && <span>Table View</span>}
-                </>
-              ) : (
-                <>
-                  <Grid className="h-4 w-4 mr-2" />
-                  {!isSmallMobile && <span>Grid View</span>}
-                </>
-              )}
-            </Button>
-            
             <Button onClick={() => setIsProductFormOpen(true)} size={isMobile ? "sm" : "default"}>
               <PlusCircle className="h-4 w-4 mr-2" />
               {!isSmallMobile ? 'Add Product' : 'Add'}
@@ -389,24 +364,6 @@ export default function Products() {
               </Button>
             }
           />
-        ) : viewMode === 'grid' ? (
-          <div className={cn(
-            "grid gap-4",
-            isMobile ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
-          )}>
-            {filteredProducts.map((product) => (
-              <ProductCard
-                key={getProductId(product)}
-                product={product}
-                onView={() => handleViewProduct(product)}
-                onEdit={() => handleEditProduct(product)}
-                onDelete={() => handleDirectDelete(product)}
-                className={cn(
-                  isMobile && "p-3 text-sm" // Smaller padding and text for mobile
-                )}
-              />
-            ))}
-          </div>
         ) : (
           <div className="border rounded-md">
             {isMobile ? (
@@ -416,7 +373,7 @@ export default function Products() {
                   <div 
                     key={getProductId(product)}
                     className="p-4 hover:bg-muted/50 transition-colors"
-                    onClick={() => handleViewProduct(product)}
+                    onClick={() => handleEditProduct(product)}
                   >
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-3">
@@ -485,7 +442,10 @@ export default function Products() {
                           <div>
                             <span 
                               className="cursor-pointer hover:text-primary hover:underline"
-                              onClick={() => handleViewProduct(product)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleEditProduct(product);
+                              }}
                             >
                               {product.name}
                             </span>
@@ -659,97 +619,6 @@ export default function Products() {
               </Button>
             </DialogFooter>
           </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Product view dialog */}
-      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className={cn(
-          "max-w-2xl",
-          isMobile && "w-[95vw] p-4"
-        )}>
-          <DialogHeader>
-            <DialogTitle className={cn(isMobile && "text-lg")}>Product Details</DialogTitle>
-          </DialogHeader>
-          
-          {selectedProduct && (
-            <div className="space-y-4">
-              <div className="space-y-4">
-                <div>
-                  <h2 className={cn("font-bold", isMobile ? "text-lg" : "text-2xl")}>{selectedProduct.name}</h2>
-                  <div className="flex items-center gap-2 mt-1">
-                    <Badge variant={selectedProduct.stock > 10 ? "default" : "destructive"}>
-                      {selectedProduct.stock > 0 ? `${selectedProduct.stock} in stock` : 'Out of stock'}
-                    </Badge>
-                    <Badge variant="outline">{selectedProduct.dimension || 'Pc'}</Badge>
-                  </div>
-                </div>
-                
-                <div>
-                  <p className={cn("font-bold", isMobile ? "text-xl" : "text-3xl")}>₹{selectedProduct.price.toLocaleString()}</p>
-                </div>
-              </div>
-              
-              <DialogFooter className={cn(
-                "gap-2 sm:gap-0",
-                isMobile && "flex-col"
-              )}>
-                <Button 
-                  variant="outline" 
-                  onClick={() => {
-                    setIsViewDialogOpen(false);
-                    handleEditProduct(selectedProduct);
-                  }}
-                  className={cn(isMobile && "w-full h-9")}
-                >
-                  <Edit className="h-4 w-4 mr-2" />
-                  Edit Product
-                </Button>
-                <Button
-                  variant="destructive"
-                  onClick={() => {
-                    setIsViewDialogOpen(false);
-                    handleDirectDelete(selectedProduct as Product);
-                  }}
-                  className={cn(isMobile && "w-full h-9")}
-                >
-                  <Trash className="h-4 w-4 mr-2" />
-                  Delete Product
-                </Button>
-              </DialogFooter>
-              
-              <div className="pt-4 mt-4 border-t border-dashed">
-                <h3 className="text-sm font-semibold mb-2">Product ID Information</h3>
-                <div className="text-xs font-mono bg-muted p-2 rounded">
-                  <div>_id: {JSON.stringify(selectedProduct._id)}</div>
-                  <div>id: {JSON.stringify(selectedProduct.id)}</div>
-                  <div>Using: {JSON.stringify(selectedProduct._id || selectedProduct.id)}</div>
-                </div>
-                <div className="mt-2 flex gap-2">
-                  <Button 
-                    size="sm" 
-                    variant="outline"
-                    onClick={() => {
-                      const productToDebug = selectedProduct;
-                      console.log('Product debug info:');
-                      console.log('Full product:', productToDebug);
-                      console.log('Keys:', Object.keys(productToDebug));
-                      console.log('_id:', productToDebug._id, typeof productToDebug._id);
-                      console.log('id:', productToDebug.id, typeof productToDebug.id);
-                      console.log('Selected ID for operations:', productToDebug._id || productToDebug.id);
-
-                      // Check what the update function would receive
-                      const updateId = productToDebug._id || productToDebug.id;
-                      console.log('Would update with ID:', updateId);
-                      toast.info(`Product would use ID: ${updateId}`);
-                    }}
-                  >
-                    Debug Product
-                  </Button>
-                </div>
-              </div>
-            </div>
-          )}
         </DialogContent>
       </Dialog>
     </DashboardLayout>
