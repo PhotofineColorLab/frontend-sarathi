@@ -65,6 +65,7 @@ export interface Order {
   customerName: string;
   customerEmail: string;
   customerPhone: string;
+  customerAddress?: string;
   orderItems: OrderItem[];
   items?: OrderItem[]; // For backward compatibility
   status: OrderStatus;

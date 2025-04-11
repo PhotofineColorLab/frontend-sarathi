@@ -213,6 +213,12 @@ export function OrderViewDialog({
                 <p className="text-sm text-muted-foreground">{order.customerPhone}</p>
               </div>
             )}
+            {order.customerAddress && (
+              <div>
+                <p className="text-sm font-medium">Address</p>
+                <p className="text-sm text-muted-foreground">{order.customerAddress}</p>
+              </div>
+            )}
           </div>
 
           <div className="mt-6">

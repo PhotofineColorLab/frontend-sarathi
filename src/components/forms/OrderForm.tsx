@@ -60,6 +60,7 @@ const orderFormSchema = z.object({
   customerName: z.string().min(2, { message: 'Customer name is required' }),
   customerPhone: z.string().min(10, { message: 'Phone number is required' }),
   customerEmail: z.string().email({ message: 'Invalid email address' }).optional().or(z.literal('')),
+  customerAddress: z.string().optional().or(z.literal('')),
   status: z.enum(['pending', 'dc', 'invoice', 'dispatched']),
   paymentCondition: z.enum(['immediate', 'days15', 'days30']),
   priority: z.enum(['high', 'medium', 'low']),
@@ -182,6 +183,7 @@ export default function OrderForm({ onSuccess, initialOrder, onCancel }: OrderFo
       customerName: initialOrder?.customerName || '',
       customerPhone: initialOrder?.customerPhone || '',
       customerEmail: initialOrder?.customerEmail || '',
+      customerAddress: initialOrder?.customerAddress || '',
       status: (initialOrder?.status as OrderStatus) || 'pending',
       paymentCondition: (initialOrder?.paymentCondition as PaymentCondition) || 'immediate',
       priority: (initialOrder?.priority as OrderPriority) || 'medium',
@@ -275,6 +277,7 @@ export default function OrderForm({ onSuccess, initialOrder, onCancel }: OrderFo
         customerName: values.customerName,
         customerPhone: values.customerPhone,
         customerEmail: values.customerEmail || undefined, // Make email optional
+        customerAddress: values.customerAddress || undefined, // Make address optional
         status: values.status,
         paymentCondition: values.paymentCondition,
         priority: values.priority,
@@ -517,6 +520,24 @@ export default function OrderForm({ onSuccess, initialOrder, onCancel }: OrderFo
                     <FormLabel>Email (Optional)</FormLabel>
                     <FormControl>
                       <Input placeholder="Enter email address" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="customerAddress"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Address (Optional)</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        placeholder="Enter customer address" 
+                        className="min-h-[80px]"
+                        {...field} 
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

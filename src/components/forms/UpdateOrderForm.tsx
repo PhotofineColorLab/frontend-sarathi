@@ -47,6 +47,7 @@ const orderFormSchema = z.object({
   customerName: z.string().min(2, { message: 'Customer name is required' }),
   customerPhone: z.string().min(10, { message: 'Phone number is required' }),
   customerEmail: z.string().email().optional().or(z.literal('')),
+  customerAddress: z.string().optional().or(z.literal('')),
   status: z.enum(['pending', 'dc', 'invoice', 'dispatched']),
   paymentCondition: z.enum(['immediate', 'days15', 'days30']),
   assignedTo: z.string().optional(),
@@ -149,6 +150,7 @@ export default function UpdateOrderForm({ order, onSuccess, onCancel }: UpdateOr
       customerName: order.customerName,
       customerPhone: order.customerPhone,
       customerEmail: order.customerEmail || '',
+      customerAddress: order.customerAddress || '',
       status: order.status as OrderStatus,
       paymentCondition: order.paymentCondition as PaymentCondition || 'immediate',
       assignedTo: order.assignedTo || 'all',
@@ -259,6 +261,7 @@ export default function UpdateOrderForm({ order, onSuccess, onCancel }: UpdateOr
         customerName: values.customerName,
         customerPhone: values.customerPhone,
         customerEmail: values.customerEmail || '',
+        customerAddress: values.customerAddress || '',
         status: values.status,
         paymentCondition: values.paymentCondition,
         assignedTo: values.assignedTo === 'all' ? null : values.assignedTo,
@@ -377,13 +380,13 @@ export default function UpdateOrderForm({ order, onSuccess, onCancel }: UpdateOr
               
               <FormField
                 control={form.control}
-                name="notes"
+                name="customerAddress"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Notes (Optional)</FormLabel>
+                    <FormLabel>Address (Optional)</FormLabel>
                     <FormControl>
                       <Textarea 
-                        placeholder="Enter any additional notes"
+                        placeholder="Enter customer address"
                         className="min-h-[80px]"
                         {...field} 
                       />
