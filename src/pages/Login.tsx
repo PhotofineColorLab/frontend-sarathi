@@ -104,22 +104,6 @@ export default function Login() {
             </CardFooter>
           </form>
         </Card>
-
-        <div className="bg-card rounded-xl p-4 border">
-          <h3 className="font-medium mb-2">Demo Credentials</h3>
-          <div className="space-y-1 text-sm">
-            <p><strong>Admin:</strong> admin@electrical.com / admin123</p>
-            <p className="text-xs text-muted-foreground mt-2">You can also login with staff members you've created using their email and password.</p>
-            <Button 
-              variant="outline" 
-              className="w-full mt-4" 
-              onClick={loginAsAdmin}
-              disabled={loading}
-            >
-              Login as Admin
-            </Button>
-          </div>
-        </div>
       </div>
     </div>
   );
