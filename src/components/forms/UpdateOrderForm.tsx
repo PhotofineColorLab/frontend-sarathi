@@ -36,7 +36,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 import { Order, OrderStatus, PaymentCondition, Product, OrderItem, User, OrderPriority } from '@/lib/types';
-import { updateOrder, updateOrderWithImage, fetchStaff, fetchProducts } from '@/lib/api';
+import { updateOrder, updateOrderWithImage, fetchStaff, fetchProducts, updateProduct } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
@@ -138,7 +138,19 @@ export default function UpdateOrderForm({ order, onSuccess, onCancel }: UpdateOr
         productId: item.productId,
         productName: item.productName,
         quantity: item.quantity,
-        price: item.price
+        price: item.price,
+        dimension: item.dimension || 'Pc'
+      }));
+      setOrderItems(formattedItems);
+    } else if (order.items && order.items.length > 0) {
+      // Fallback for orders that might have items in an 'items' property
+      const formattedItems = order.items.map(item => ({
+        id: item._id || item.id || Math.random().toString(36).substring(2, 9),
+        productId: item.productId,
+        productName: item.productName,
+        quantity: item.quantity,
+        price: item.price,
+        dimension: item.dimension || 'Pc'
       }));
       setOrderItems(formattedItems);
     }
@@ -210,6 +222,7 @@ export default function UpdateOrderForm({ order, onSuccess, onCancel }: UpdateOr
         productName: product.name,
         quantity: quantityValue,
         price: product.price,
+        dimension: product.dimension || 'Pc'
       };
       setOrderItems([...orderItems, newItem]);
     }
@@ -219,6 +232,16 @@ export default function UpdateOrderForm({ order, onSuccess, onCancel }: UpdateOr
     setProductSearch('');
     setQuantity('');
     setShowProductResults(false);
+  };
+
+  // Update item quantity directly
+  const handleUpdateItemQuantity = (id: string, newQuantity: number) => {
+    if (newQuantity <= 0) return;
+    
+    const updatedItems = orderItems.map(item => 
+      item.id === id ? { ...item, quantity: newQuantity } : item
+    );
+    setOrderItems(updatedItems);
   };
 
   // Handle product selection from search results
@@ -251,12 +274,38 @@ export default function UpdateOrderForm({ order, onSuccess, onCancel }: UpdateOr
       // Set dispatchDate if status is dispatched
       const dispatchDate = values.status === 'dispatched' ? new Date().toISOString() : undefined;
       
+      // Track inventory changes
+      const inventoryAdjustments: Record<string, number> = {};
+      
+      // Calculate inventory adjustments by comparing original quantities with new quantities
+      const originalItems = [...(order.orderItems || order.items || [])];
+      
+      // First, track what was in the original order
+      originalItems.forEach(originalItem => {
+        const productId = originalItem.productId;
+        // Negative means we'll need to add this back to inventory
+        inventoryAdjustments[productId] = -originalItem.quantity;
+      });
+      
+      // Then, track what's in the updated order
+      orderItems.forEach(newItem => {
+        const productId = newItem.productId;
+        if (productId in inventoryAdjustments) {
+          // If product already exists, add the new quantity (will result in net adjustment)
+          inventoryAdjustments[productId] += newItem.quantity;
+        } else {
+          // If it's a new product, just take the quantity
+          inventoryAdjustments[productId] = newItem.quantity;
+        }
+      });
+      
       // Clean up order items to match backend expectations
       const sanitizedItems = orderItems.map(item => ({
         productId: item.productId,
         productName: item.productName,
         quantity: item.quantity,
-        price: item.price
+        price: item.price,
+        dimension: item.dimension || 'Pc'
       }));
       
       // Create the base order data
@@ -279,6 +328,9 @@ export default function UpdateOrderForm({ order, onSuccess, onCancel }: UpdateOr
         ? { ...orderData, dispatchDate } 
         : orderData;
       
+      // Update the order first
+      let updatedOrder;
+      
       // If we need to update with a new image, we should use FormData
       if (orderImage) {
         const formData = new FormData();
@@ -286,10 +338,38 @@ export default function UpdateOrderForm({ order, onSuccess, onCancel }: UpdateOr
         formData.append('orderImage', orderImage);
         
         // Use the update with FormData approach
-        await updateOrderWithImage(order._id, formData);
+        updatedOrder = await updateOrderWithImage(order._id, formData);
       } else {
         // Update order without changing the image
-        await updateOrder(order._id, finalOrderData);
+        updatedOrder = await updateOrder(order._id, finalOrderData);
+      }
+      
+      // Only if the order updated successfully, update product inventories
+      if (updatedOrder) {
+        // Update product stock levels based on inventory adjustments
+        for (const [productId, adjustment] of Object.entries(inventoryAdjustments)) {
+          // Only make API calls if there's actually a change in quantity
+          if (adjustment !== 0) {
+            try {
+              // Find the current product data
+              const product = products.find(p => (p._id === productId || p.id === productId));
+              
+              if (product) {
+                // Calculate new stock level (subtract because taking from inventory)
+                // If adjustment is positive, we're using more product (reduce stock)
+                // If adjustment is negative, we're using less product (increase stock)
+                const newStock = Math.max(0, product.stock - adjustment);
+                
+                // Update the product stock
+                await updateProduct(productId, { stock: newStock });
+                console.log(`Updated product ${product.name} stock from ${product.stock} to ${newStock}`);
+              }
+            } catch (error) {
+              console.error(`Error updating stock for product ${productId}:`, error);
+              // Continue with other products even if one fails
+            }
+          }
+        }
       }
       
       toast.success('Order updated successfully');
@@ -563,134 +643,151 @@ export default function UpdateOrderForm({ order, onSuccess, onCancel }: UpdateOr
             <div className="space-y-4">
               <h3 className="text-md sm:text-lg font-medium">Order Items</h3>
               
-              <div className="space-y-2">
-                <div className="relative" ref={searchRef}>
-                  <div className="flex flex-col sm:flex-row gap-2">
-                    <div className="relative flex-1">
-                      <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                      <Input
-                        placeholder="Search products..."
-                        className="pl-8"
-                        value={productSearch}
-                        onChange={(e) => {
-                          setProductSearch(e.target.value);
-                          setShowProductResults(true);
-                        }}
-                        onFocus={() => setShowProductResults(true)}
-                      />
-                    </div>
-                    <div className="flex">
-                      <Input
-                        type="number"
-                        min="0"
-                        value={quantity}
-                        onChange={(e) => setQuantity(e.target.value)}
-                        placeholder="Qty"
-                        className="w-full sm:w-20 rounded-r-none"
-                      />
-                      <Button
-                        type="button"
-                        className="rounded-l-none"
-                        onClick={handleAddItem}
-                        disabled={!selectedProduct}
-                      >
-                        Add
-                      </Button>
-                    </div>
-                  </div>
-                  
-                  {/* Search results */}
-                  {showProductResults && productSearch && (
-                    <div className="absolute w-full z-10 mt-1 border rounded-md bg-background shadow-lg">
-                      <ScrollArea className="h-60">
-                        {isLoadingProducts ? (
-                          <div className="p-4 text-center">
-                            <Loader2 className="h-5 w-5 mx-auto animate-spin text-muted-foreground" />
-                            <p className="text-sm text-muted-foreground mt-2">Loading products...</p>
-                          </div>
-                        ) : filteredProducts.length === 0 ? (
-                          <div className="p-4 text-center text-muted-foreground">
-                            No products found
-                          </div>
-                        ) : (
-                          <div>
-                            {filteredProducts.map((product) => {
-                              // Type assertion for product in the UI
-                              const productWithSku = product as (Product & { sku?: string });
-                              
-                              return (
-                                <div
-                                  key={product._id || product.id}
-                                  className={cn(
-                                    "flex items-center justify-between p-3 cursor-pointer hover:bg-muted transition-colors",
-                                    product.stock <= 0 && "opacity-50"
-                                  )}
-                                  onClick={() => product.stock > 0 && handleSelectProduct(product)}
+              <div className="space-y-4">
+                <div className="flex items-center">
+                  <p className="text-sm text-muted-foreground">Current items in order:</p>
+                </div>
+                
+                {orderItems.length > 0 ? (
+                  <Card>
+                    <CardContent className="p-0 overflow-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Product</TableHead>
+                            <TableHead className="text-center">Qty</TableHead>
+                            <TableHead className="text-right">Price</TableHead>
+                            <TableHead className="text-right">Total</TableHead>
+                            <TableHead className="text-center">Dimension</TableHead>
+                            <TableHead></TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {orderItems.map((item) => (
+                            <TableRow key={item.id}>
+                              <TableCell className="max-w-[120px] sm:max-w-none truncate">{item.productName}</TableCell>
+                              <TableCell className="text-center">
+                                <Input 
+                                  type="number"
+                                  min="1"
+                                  value={item.quantity}
+                                  onChange={(e) => handleUpdateItemQuantity(item.id!, parseInt(e.target.value) || 1)}
+                                  className="w-16 h-8 text-center p-1"
+                                />
+                              </TableCell>
+                              <TableCell className="text-right">₹{item.price.toFixed(2)}</TableCell>
+                              <TableCell className="text-right">₹{(item.price * item.quantity).toFixed(2)}</TableCell>
+                              <TableCell className="text-center">{item.dimension || 'Pc'}</TableCell>
+                              <TableCell className="text-right p-0 pr-2">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleRemoveItem(item.id!)}
                                 >
-                                  <div>
-                                    <div className="font-medium">{product.name}</div>
-                                  </div>
-                                  <div className="text-right">
-                                    <div>₹{product.price.toFixed(2)}</div>
-                                    <div className={cn(
-                                      "text-xs",
-                                      product.stock <= 5 ? "text-destructive" : "text-muted-foreground"
-                                    )}>
-                                      Stock: {product.stock}
+                                  <Trash2 className="h-4 w-4 text-destructive" />
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div className="text-center py-6 border rounded-md border-dashed">
+                    <p className="text-muted-foreground">No items in this order</p>
+                  </div>
+                )}
+                
+                <div className="mt-6">
+                  <p className="text-sm font-medium mb-2">Add New Items</p>
+                  <div className="relative" ref={searchRef}>
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <div className="relative flex-1">
+                        <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                          placeholder="Search products..."
+                          className="pl-8"
+                          value={productSearch}
+                          onChange={(e) => {
+                            setProductSearch(e.target.value);
+                            setShowProductResults(true);
+                          }}
+                          onFocus={() => setShowProductResults(true)}
+                        />
+                      </div>
+                      <div className="flex">
+                        <Input
+                          type="number"
+                          min="0"
+                          value={quantity}
+                          onChange={(e) => setQuantity(e.target.value)}
+                          placeholder="Qty"
+                          className="w-full sm:w-20 rounded-r-none"
+                        />
+                        <Button
+                          type="button"
+                          className="rounded-l-none"
+                          onClick={handleAddItem}
+                          disabled={!selectedProduct}
+                        >
+                          Add
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    {/* Search results */}
+                    {showProductResults && productSearch && (
+                      <div className="absolute w-full z-10 mt-1 border rounded-md bg-background shadow-lg">
+                        <ScrollArea className="h-60">
+                          {isLoadingProducts ? (
+                            <div className="p-4 text-center">
+                              <Loader2 className="h-5 w-5 mx-auto animate-spin text-muted-foreground" />
+                              <p className="text-sm text-muted-foreground mt-2">Loading products...</p>
+                            </div>
+                          ) : filteredProducts.length === 0 ? (
+                            <div className="p-4 text-center text-muted-foreground">
+                              No products found
+                            </div>
+                          ) : (
+                            <div>
+                              {filteredProducts.map((product) => {
+                                // Type assertion for product in the UI
+                                const productWithSku = product as (Product & { sku?: string });
+                                
+                                return (
+                                  <div
+                                    key={product._id || product.id}
+                                    className={cn(
+                                      "flex items-center justify-between p-3 cursor-pointer hover:bg-muted transition-colors",
+                                      product.stock <= 0 && "opacity-50"
+                                    )}
+                                    onClick={() => product.stock > 0 && handleSelectProduct(product)}
+                                  >
+                                    <div>
+                                      <div className="font-medium">{product.name}</div>
+                                    </div>
+                                    <div className="text-right">
+                                      <div>₹{product.price.toFixed(2)}</div>
+                                      <div className={cn(
+                                        "text-xs",
+                                        product.stock <= 5 ? "text-destructive" : "text-muted-foreground"
+                                      )}>
+                                        Stock: {product.stock}
+                                      </div>
                                     </div>
                                   </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </ScrollArea>
-                    </div>
-                  )}
+                                );
+                              })}
+                            </div>
+                          )}
+                        </ScrollArea>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
-              
-              {orderItems.length > 0 ? (
-                <Card>
-                  <CardContent className="p-0 overflow-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Product</TableHead>
-                          <TableHead className="text-center">Qty</TableHead>
-                          <TableHead className="text-right">Price</TableHead>
-                          <TableHead className="text-right">Total</TableHead>
-                          <TableHead></TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {orderItems.map((item) => (
-                          <TableRow key={item.id}>
-                            <TableCell className="max-w-[120px] sm:max-w-none truncate">{item.productName}</TableCell>
-                            <TableCell className="text-center">{item.quantity}</TableCell>
-                            <TableCell className="text-right">₹{item.price.toFixed(2)}</TableCell>
-                            <TableCell className="text-right">₹{(item.price * item.quantity).toFixed(2)}</TableCell>
-                            <TableCell className="text-right p-0 pr-2">
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleRemoveItem(item.id)}
-                              >
-                                <Trash2 className="h-4 w-4 text-destructive" />
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="text-center py-6 border rounded-md border-dashed">
-                  <p className="text-muted-foreground">No items added yet</p>
-                </div>
-              )}
               
               {orderItems.length > 0 && (
                 <div className="flex justify-between items-center pt-4 border-t">

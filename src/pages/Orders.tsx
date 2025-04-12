@@ -12,6 +12,7 @@ import { MarkPaidDialog } from '@/components/orders/MarkPaidDialog';
 import { Order, OrderStatus } from '@/lib/types';
 import OrderForm from '@/components/forms/OrderForm';
 import { PaginationWrapper } from '@/components/ui/pagination-wrapper';
+import UpdateOrderForm from '@/components/forms/UpdateOrderForm';
 import { 
   fetchOrders, 
   fetchOrdersByDateRange, 
@@ -293,8 +294,8 @@ export default function Orders() {
   if (isUpdateMode && selectedOrder) {
     return (
       <DashboardLayout>
-        <OrderForm 
-          initialOrder={selectedOrder}
+        <UpdateOrderForm 
+          order={selectedOrder}
           onSuccess={() => {
             setIsUpdateMode(false);
             setSelectedOrder(null);
