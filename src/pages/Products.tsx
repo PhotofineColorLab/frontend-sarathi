@@ -45,6 +45,7 @@ import { useNavigate } from 'react-router-dom';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/contexts/AuthContext';
+import { DeleteProductDialog } from '@/components/products/DeleteProductDialog';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -58,7 +59,6 @@ export default function Products() {
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   
   // Form states
@@ -149,44 +149,97 @@ export default function Products() {
     return String(product._id || product.id || '');
   };
 
-  // Handle edit using consistent ID
-  const handleEditProduct = (product: any) => {
-    setSelectedProduct(product);
+  // Enhanced handle edit product function
+  const handleEditProduct = (product: Product) => {
+    setSelectedProduct({...product});
     setIsProductFormOpen(true);
     setIsEditing(true);
   };
 
-  // Direct handler for product deletion with simplified ID handling
-  const handleDirectDelete = async (product: Product) => {
-    const deleteId = product._id || product.id;
+  // Handle opening the delete dialog with product data
+  const handleOpenDeleteDialog = (product: Product, e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation();
+    }
     
-    if (!deleteId) {
-      toast.error(`Cannot delete ${product.name}: No ID available`);
+    console.log("Original product received in handleOpenDeleteDialog:", product);
+    
+    if (!product) {
+      console.error("Null or undefined product passed to handleOpenDeleteDialog");
+      toast.error("Cannot delete: Invalid product data");
       return;
     }
     
-    if (!confirm(`Are you sure you want to delete "${product.name}"?`)) {
+    // Create a complete product object with all required fields
+    const completeProduct = {
+      _id: product._id || product.id || "",
+      id: product.id || product._id || "",
+      name: product.name || "",
+      price: typeof product.price === 'number' ? product.price : 0,
+      stock: typeof product.stock === 'number' ? product.stock : 0,
+      dimension: product.dimension || 'Pc',
+      createdAt: product.createdAt || new Date(),
+      updatedAt: product.updatedAt || new Date()
+    };
+    
+    console.log("Processed product for delete dialog:", completeProduct);
+    
+    // Direct state update with complete product object
+    setSelectedProduct(completeProduct as Product);
+    setIsDeleteDialogOpen(true);
+  };
+
+  // Handle product deletion with better error handling
+  const handleDeleteProduct = async (productId: string): Promise<void> => {
+    if (!productId) {
+      console.error("Empty product ID provided to handleDeleteProduct");
+      toast.error("Cannot delete: Missing product ID");
       return;
     }
-    
+
     try {
-      toast.loading(`Deleting ${product.name}...`);
+      // Find the product before deletion
+      const productToDelete = products.find(p => 
+        (p._id === productId || p.id === productId)
+      );
       
-      await deleteProductAPI(deleteId as string);
+      if (!productToDelete) {
+        console.error(`Product with ID ${productId} not found in products array`);
+        toast.error("Product not found in current list");
+        return;
+      }
       
+      console.log(`Deleting product: ${productToDelete.name} (ID: ${productId})`);
+      
+      // Call API to delete product
+      await deleteProductAPI(productId);
+      
+      // Update local state by filtering out the deleted product
       setProducts(prev => 
         prev.filter(p => !(
-          (p._id && p._id === product._id) || 
-          (p.id && p.id === product.id)
+          (p._id && p._id === productId) || 
+          (p.id && p.id === productId)
         ))
       );
       
-      toast.dismiss();
-      toast.success(`${product.name} deleted successfully`);
+      // Show success notification
+      toast.success(`${productToDelete.name || 'Product'} deleted successfully`);
+      
+      // Add to notifications
+      addNotification({
+        type: 'product',
+        title: 'Product Deleted',
+        message: `${productToDelete.name || 'Product'} has been successfully removed from your inventory`,
+        actionUrl: '/products'
+      });
+      
+      // Clear the selected product and close dialog only on success
+      setSelectedProduct(null);
+      setIsDeleteDialogOpen(false);
     } catch (error: any) {
-      toast.dismiss();
       console.error('Failed to delete product:', error);
       toast.error(error.message || 'Failed to delete product');
+      // Do not close dialog or clear selected product on error
     }
   };
 
@@ -248,6 +301,13 @@ export default function Products() {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesSearch;
   });
+
+  // Add debug logging for the first product in filtered list
+  React.useEffect(() => {
+    if (filteredProducts.length > 0) {
+      console.log("Sample product in filteredProducts:", filteredProducts[0]);
+    }
+  }, [filteredProducts]);
 
   // Pagination logic
   const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE);
@@ -361,10 +421,7 @@ export default function Products() {
                           variant="ghost" 
                           size="sm"
                           className="h-8 w-8 p-0 text-destructive"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDirectDelete(product);
-                          }}
+                          onClick={(e) => handleOpenDeleteDialog(product, e)}
                         >
                           <Trash className="h-4 w-4" />
                         </Button>
@@ -434,10 +491,7 @@ export default function Products() {
                             variant="ghost" 
                             size="icon"
                             className="text-destructive"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDirectDelete(product);
-                            }}
+                            onClick={(e) => handleOpenDeleteDialog(product, e)}
                           >
                             <Trash className="h-4 w-4" />
                           </Button>
@@ -576,6 +630,13 @@ export default function Products() {
           </form>
         </DialogContent>
       </Dialog>
+
+      <DeleteProductDialog 
+        isOpen={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        product={selectedProduct}
+        onDelete={handleDeleteProduct}
+      />
     </DashboardLayout>
   );
 }
