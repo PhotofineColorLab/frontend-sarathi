@@ -54,6 +54,7 @@ export default function Products() {
   const [searchTerm, setSearchTerm] = useState('');
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [productToDelete, setProductToDelete] = useState<Product | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isProductFormOpen, setIsProductFormOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -162,30 +163,13 @@ export default function Products() {
       e.stopPropagation();
     }
     
-    console.log("Original product received in handleOpenDeleteDialog:", product);
+    // Immediately make a deep copy of the product
+    const productData = JSON.parse(JSON.stringify(product));
     
-    if (!product) {
-      console.error("Null or undefined product passed to handleOpenDeleteDialog");
-      toast.error("Cannot delete: Invalid product data");
-      return;
-    }
+    console.log("Original product in handleOpenDeleteDialog:", productData);
     
-    // Create a complete product object with all required fields
-    const completeProduct = {
-      _id: product._id || product.id || "",
-      id: product.id || product._id || "",
-      name: product.name || "",
-      price: typeof product.price === 'number' ? product.price : 0,
-      stock: typeof product.stock === 'number' ? product.stock : 0,
-      dimension: product.dimension || 'Pc',
-      createdAt: product.createdAt || new Date(),
-      updatedAt: product.updatedAt || new Date()
-    };
-    
-    console.log("Processed product for delete dialog:", completeProduct);
-    
-    // Direct state update with complete product object
-    setSelectedProduct(completeProduct as Product);
+    // Set product to delete and open dialog in single update
+    setProductToDelete(productData);
     setIsDeleteDialogOpen(true);
   };
 
@@ -233,13 +217,13 @@ export default function Products() {
         actionUrl: '/products'
       });
       
-      // Clear the selected product and close dialog only on success
-      setSelectedProduct(null);
+      // Clear the product to delete and close dialog only on success
+      setProductToDelete(null);
       setIsDeleteDialogOpen(false);
     } catch (error: any) {
       console.error('Failed to delete product:', error);
       toast.error(error.message || 'Failed to delete product');
-      // Do not close dialog or clear selected product on error
+      // Do not close dialog or clear product on error
     }
   };
 
@@ -634,7 +618,7 @@ export default function Products() {
       <DeleteProductDialog 
         isOpen={isDeleteDialogOpen}
         onOpenChange={setIsDeleteDialogOpen}
-        product={selectedProduct}
+        product={productToDelete}
         onDelete={handleDeleteProduct}
       />
     </DashboardLayout>

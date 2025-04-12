@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,36 +27,46 @@ export function DeleteProductDialog({
   onDelete,
 }: DeleteProductDialogProps) {
   const [isLoading, setIsLoading] = React.useState(false);
+  const productRef = useRef<Product | null>(null);
   
-  // Enhanced debugging when dialog opens
+  // Store product in ref when it changes
+  useEffect(() => {
+    if (product) {
+      console.log("Storing product in ref:", product);
+      productRef.current = product;
+    }
+  }, [product]);
+  
+  // When dialog opens, log the product data
   useEffect(() => {
     if (isOpen) {
       console.log('Delete Dialog Opened');
-      console.log('Product in DeleteProductDialog:', product);
+      console.log('Product passed to dialog:', product);
+      console.log('Product stored in ref:', productRef.current);
       
-      if (!product) {
+      // If no product is available, show error and close dialog
+      if (!product && !productRef.current) {
         console.error('Product is null or undefined');
-      } else {
-        console.table({
-          name: product.name || 'Missing name',
-          id: product._id || product.id || 'Missing ID',
-          price: product.price || 'Missing price',
-          stock: product.stock || 'Missing stock',
-          dimension: product.dimension || 'Missing dimension'
-        });
+        toast.error("Cannot delete: Product information is missing");
+        onOpenChange(false);
       }
     }
-  }, [isOpen, product]);
+  }, [isOpen, product, onOpenChange]);
 
   const handleDelete = async () => {
-    if (!product) {
+    // Use either current product or stored product from ref
+    const productToDelete = product || productRef.current;
+    
+    if (!productToDelete) {
       toast.error("Cannot delete: Product information is missing");
+      onOpenChange(false);
       return;
     }
     
-    const productId = product._id || product.id;
+    const productId = productToDelete._id || productToDelete.id;
     if (!productId) {
       toast.error("Cannot delete: Product ID is missing");
+      onOpenChange(false);
       return;
     }
     
@@ -71,11 +81,19 @@ export function DeleteProductDialog({
     }
   };
 
+  // No product to display
+  if (!product && !productRef.current) {
+    return null;
+  }
+
+  // Use either current product or stored product from ref
+  const productToShow = product || productRef.current;
+  
   // Get safe values with fallbacks
-  const productName = product?.name || 'Unknown Product';
-  const productStock = product?.stock ?? 0;
-  const productDimension = product?.dimension || 'Pc';
-  const productPrice = product?.price ?? 0;
+  const productName = productToShow?.name || 'Unknown Product';
+  const productStock = productToShow?.stock ?? 0;
+  const productDimension = productToShow?.dimension || 'Pc';
+  const productPrice = productToShow?.price ?? 0;
   
   // Format the price with thousand separators
   const formattedPrice = `₹${productPrice.toLocaleString()}`;
