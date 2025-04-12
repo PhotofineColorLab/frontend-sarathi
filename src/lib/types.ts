@@ -38,6 +38,7 @@ export interface Product {
   price: number;
   stock: number;
   dimension?: ProductDimension;
+  threshold?: number; // Add threshold field with default
   createdAt: Date;
   updatedAt: Date;
 }

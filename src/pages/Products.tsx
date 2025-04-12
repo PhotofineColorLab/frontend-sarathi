@@ -63,10 +63,11 @@ export default function Products() {
   const [currentPage, setCurrentPage] = useState(1);
   
   // Form states
-  const [productName, setProductName] = useState(() => selectedProduct?.name || '');
-  const [productPrice, setProductPrice] = useState(() => selectedProduct?.price ? selectedProduct.price.toString() : '');
-  const [productStock, setProductStock] = useState(() => selectedProduct?.stock ? selectedProduct.stock.toString() : '');
-  const [productDimension, setProductDimension] = useState<ProductDimension>(() => (selectedProduct?.dimension as ProductDimension) || 'Pc');
+  const [productName, setProductName] = useState('');
+  const [productPrice, setProductPrice] = useState('');
+  const [productStock, setProductStock] = useState('');
+  const [productDimension, setProductDimension] = useState<ProductDimension>('Pc');
+  const [productThreshold, setProductThreshold] = useState('');
 
   const isMobile = useIsMobile();
   const isSmallMobile = useIsSmallMobile();
@@ -82,6 +83,9 @@ export default function Products() {
       try {
         const data = await fetchProducts();
         
+        // Add debugging for raw data
+        console.log('Raw products data from API:', JSON.stringify(data.slice(0, 3), null, 2));
+        
         // Ensure all products have consistent ID properties
         const processedProducts = data.map((product: any) => {
           const processedProduct = { ...product };
@@ -92,6 +96,9 @@ export default function Products() {
           }
           return processedProduct;
         });
+        
+        // Add debugging for processed data
+        console.log('Processed products data:', JSON.stringify(processedProducts.slice(0, 3), null, 2));
         
         setProducts(processedProducts);
         setCurrentPage(1); // Reset to first page
@@ -118,6 +125,7 @@ export default function Products() {
       setProductPrice(selectedProduct.price.toString() || '');
       setProductStock(selectedProduct.stock.toString() || '');
       setProductDimension((selectedProduct.dimension as ProductDimension) || 'Pc');
+      setProductThreshold(selectedProduct.threshold?.toString() || '');
     } else if (!isEditing) {
       // Reset form when not editing
       resetForm();
@@ -136,6 +144,7 @@ export default function Products() {
     setProductPrice('');
     setProductStock('');
     setProductDimension('Pc');
+    setProductThreshold('');
     setIsEditing(false);
     setSelectedProduct(null);
   };
@@ -232,13 +241,21 @@ export default function Products() {
     setIsSubmitting(true);
 
     try {
+      // Parse the threshold value as number or undefined if empty
+      const thresholdValue = productThreshold ? parseInt(productThreshold) : undefined;
+      
+      console.log('Submitting product with threshold:', thresholdValue);
+      
       const formData = {
         name: productName,
         price: parseFloat(productPrice),
         stock: parseInt(productStock),
-        dimension: productDimension
+        dimension: productDimension,
+        threshold: thresholdValue
       };
 
+      console.log('Product form data:', formData);
+      
       let updatedProduct;
       
       if (isEditing && selectedProduct) {
@@ -383,7 +400,7 @@ export default function Products() {
                           <p className="text-xs text-muted-foreground">{product.dimension || 'Pc'}</p>
                         </div>
                       </div>
-                      <Badge variant={product.stock > 10 ? "default" : "destructive"}>
+                      <Badge variant={typeof product.threshold === 'number' && product.stock < product.threshold ? "destructive" : "default"}>
                         {product.stock > 0 ? `${product.stock} in stock` : 'Out of stock'}
                       </Badge>
                     </div>
@@ -452,7 +469,7 @@ export default function Products() {
                       </TableCell>
                       <TableCell>₹{product.price.toLocaleString()}</TableCell>
                       <TableCell>
-                        <Badge variant={product.stock > 10 ? "default" : "destructive"}>
+                        <Badge variant={typeof product.threshold === 'number' && product.stock < product.threshold ? "destructive" : "default"}>
                           {product.stock > 0 ? `${product.stock} in stock` : 'Out of stock'}
                         </Badge>
                       </TableCell>
@@ -554,6 +571,23 @@ export default function Products() {
                   required
                   className={cn(isMobile && "h-9 text-sm")}
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="threshold" className={cn(isMobile && "text-sm")}>Low Stock Threshold</Label>
+                <Input
+                  id="threshold"
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={productThreshold}
+                  onChange={(e) => setProductThreshold(e.target.value)}
+                  placeholder="Enter threshold value"
+                  className={cn(isMobile && "h-9 text-sm")}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Alert will be shown when stock is below this number
+                </p>
               </div>
             </div>
             

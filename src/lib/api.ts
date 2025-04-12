@@ -241,6 +241,8 @@ export const deleteStaff = async (id: string) => {
 export const fetchProducts = async () => {
   const token = getAuthToken();
   const url = `${API_URL}/products`;
+  
+  console.log('Fetching products from URL:', url);
     
   const response = await fetch(url, {
     headers: {
@@ -252,7 +254,9 @@ export const fetchProducts = async () => {
     throw new Error('Failed to fetch products');
   }
 
-  return response.json();
+  const data = await response.json();
+  console.log('Products received from server:', JSON.stringify(data.slice(0, 3), null, 2));
+  return data;
 };
 
 export const createProduct = async (productData: Omit<Product, 'id' | '_id' | 'createdAt' | 'updatedAt'>) => {
@@ -262,7 +266,15 @@ export const createProduct = async (productData: Omit<Product, 'id' | '_id' | 'c
     throw new Error('Authentication required');
   }
   
-  console.log('Sending product data:', JSON.stringify(productData, null, 2));
+  // Ensure threshold is explicitly set as a number or removed if undefined
+  const processedData = { ...productData };
+  if (processedData.threshold === undefined || processedData.threshold === null) {
+    delete processedData.threshold;
+  } else if (typeof processedData.threshold === 'string') {
+    processedData.threshold = parseInt(processedData.threshold as unknown as string);
+  }
+  
+  console.log('Sending product data:', JSON.stringify(processedData, null, 2));
   
   const response = await fetch(`${API_URL}/products`, {
     method: 'POST',
@@ -270,7 +282,7 @@ export const createProduct = async (productData: Omit<Product, 'id' | '_id' | 'c
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`,
     },
-    body: JSON.stringify(productData),
+    body: JSON.stringify(processedData),
   });
 
   if (!response.ok) {
@@ -279,7 +291,9 @@ export const createProduct = async (productData: Omit<Product, 'id' | '_id' | 'c
     throw new Error(error.message || 'Failed to create product');
   }
 
-  return response.json();
+  const product = await response.json();
+  console.log('Product created:', JSON.stringify(product, null, 2));
+  return product;
 };
 
 export const updateProduct = async (id: string, productData: Partial<Product>) => {
@@ -289,13 +303,23 @@ export const updateProduct = async (id: string, productData: Partial<Product>) =
     throw new Error('Authentication required');
   }
   
+  // Ensure threshold is explicitly set as a number or removed if undefined
+  const processedData = { ...productData };
+  if (processedData.threshold === undefined || processedData.threshold === null) {
+    delete processedData.threshold;
+  } else if (typeof processedData.threshold === 'string') {
+    processedData.threshold = parseInt(processedData.threshold as unknown as string);
+  }
+  
+  console.log('Updating product with data:', JSON.stringify(processedData, null, 2));
+  
   const response = await fetch(`${API_URL}/products/${id}`, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`,
     },
-    body: JSON.stringify(productData),
+    body: JSON.stringify(processedData),
   });
 
   if (!response.ok) {
@@ -303,7 +327,9 @@ export const updateProduct = async (id: string, productData: Partial<Product>) =
     throw new Error(error.message || 'Failed to update product');
   }
 
-  return response.json();
+  const product = await response.json();
+  console.log('Product updated:', JSON.stringify(product, null, 2));
+  return product;
 };
 
 export const deleteProduct = async (id: string) => {

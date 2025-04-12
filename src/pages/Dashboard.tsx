@@ -36,7 +36,9 @@ export default function Dashboard() {
         setOrders(ordersData);
         setProducts(productsData);
         
-        const lowStockItems = productsData.filter(p => p.stock < 15);
+        const lowStockItems = productsData.filter(p => 
+          typeof p.threshold === 'number' && p.stock < p.threshold
+        );
         if (lowStockItems.length > 0) {
           addNotification({
             type: 'product',
@@ -86,7 +88,9 @@ export default function Dashboard() {
     new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   );
   const productCount = products.length;
-  const lowStockProducts = products.filter(p => p.stock < 15).sort((a, b) => a.stock - b.stock);
+  const lowStockProducts = products.filter(p => 
+    typeof p.threshold === 'number' && p.stock < p.threshold
+  ).sort((a, b) => a.stock - b.stock);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-IN', {
@@ -354,12 +358,12 @@ export default function Dashboard() {
                                 isSmallMobile ? "col-span-2" : "col-span-3"
                               )}>
                                 <Badge 
-                                  variant={product.stock === 0 ? "destructive" : "outline"} 
+                                  variant={product.stock === 0 ? "destructive" : (typeof product.threshold === 'number' && product.stock < product.threshold ? "destructive" : "outline")} 
                                   className={cn(
                                     isSmallMobile && "text-[10px] px-1 py-0 h-5 whitespace-nowrap"
                                   )}
                                 >
-                                  {product.stock} {product.stock === 1 ? 'item' : 'items'}
+                                  {product.stock}/{product.threshold || '-'} {product.dimension || 'items'}
                                 </Badge>
                               </div>
                             </div>
