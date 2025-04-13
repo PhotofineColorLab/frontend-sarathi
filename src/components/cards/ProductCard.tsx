@@ -9,7 +9,6 @@ interface Product {
   id?: string;
   _id?: string;
   name: string;
-  price: number;
   stock: number;
   dimension?: string;
 }
@@ -61,8 +60,6 @@ export function ProductCard({
             {product.stock > 0 ? `${product.stock}` : 'Out'}
           </Badge>
         </div>
-        
-        <p className="font-bold text-lg">₹{product.price.toLocaleString()}</p>
       </CardContent>
       
       <CardFooter className="p-4 pt-0 flex justify-between">

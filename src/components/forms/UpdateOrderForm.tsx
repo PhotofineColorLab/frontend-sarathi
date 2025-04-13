@@ -73,6 +73,7 @@ export default function UpdateOrderForm({ order, onSuccess, onCancel }: UpdateOr
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<string>('');
   const [quantity, setQuantity] = useState<string>('');
+  const [price, setPrice] = useState<string>('');
   const [staffMembers, setStaffMembers] = useState<User[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoadingProducts, setIsLoadingProducts] = useState(true);
@@ -198,16 +199,27 @@ export default function UpdateOrderForm({ order, onSuccess, onCancel }: UpdateOr
           (productWithSku.sku && typeof productWithSku.sku === 'string' && productWithSku.sku.toLowerCase().includes(productSearch.toLowerCase()));
       });
 
+  // Handle product selection from search results
+  const handleSelectProduct = (product: Product) => {
+    setSelectedProduct(product._id || product.id);
+    setProductSearch(product.name);
+    setPrice('');
+    setShowProductResults(false);
+  };
+
   // Add item to order
   const handleAddItem = () => {
     const quantityValue = parseInt(quantity) || 0;
-    if (!selectedProduct || quantityValue <= 0) return;
+    const priceValue = parseFloat(price) || 0;
+    if (!selectedProduct || quantityValue <= 0 || priceValue <= 0) return;
     
     const product = products.find(p => (p._id || p.id) === selectedProduct);
     if (!product) return;
     
-    // Check if we already have this product in our items
-    const existingItemIndex = orderItems.findIndex(item => item.productId === selectedProduct);
+    // Check if we already have this product in our items (match by both productId and price)
+    const existingItemIndex = orderItems.findIndex(
+      item => item.productId === selectedProduct && item.price === priceValue
+    );
     
     if (existingItemIndex >= 0) {
       // Update the existing item
@@ -221,7 +233,7 @@ export default function UpdateOrderForm({ order, onSuccess, onCancel }: UpdateOr
         productId: product._id || product.id,
         productName: product.name,
         quantity: quantityValue,
-        price: product.price,
+        price: priceValue,
         dimension: product.dimension || 'Pc'
       };
       setOrderItems([...orderItems, newItem]);
@@ -231,6 +243,7 @@ export default function UpdateOrderForm({ order, onSuccess, onCancel }: UpdateOr
     setSelectedProduct('');
     setProductSearch('');
     setQuantity('');
+    setPrice('');
     setShowProductResults(false);
   };
 
@@ -242,13 +255,6 @@ export default function UpdateOrderForm({ order, onSuccess, onCancel }: UpdateOr
       item.id === id ? { ...item, quantity: newQuantity } : item
     );
     setOrderItems(updatedItems);
-  };
-
-  // Handle product selection from search results
-  const handleSelectProduct = (product: Product) => {
-    setSelectedProduct(product._id || product.id);
-    setProductSearch(product.name);
-    setShowProductResults(false);
   };
 
   // Remove item from order
@@ -703,38 +709,46 @@ export default function UpdateOrderForm({ order, onSuccess, onCancel }: UpdateOr
                 <div className="mt-6">
                   <p className="text-sm font-medium mb-2">Add New Items</p>
                   <div className="relative" ref={searchRef}>
-                    <div className="flex flex-col sm:flex-row gap-2">
-                      <div className="relative flex-1">
-                        <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                        <Input
-                          placeholder="Search products..."
-                          className="pl-8"
-                          value={productSearch}
-                          onChange={(e) => {
-                            setProductSearch(e.target.value);
+                    <div className="flex">
+                      <Input
+                        type="text"
+                        value={productSearch}
+                        onChange={(e) => {
+                          setProductSearch(e.target.value);
+                          if (e.target.value.trim() !== '') {
                             setShowProductResults(true);
-                          }}
-                          onFocus={() => setShowProductResults(true)}
-                        />
-                      </div>
-                      <div className="flex">
-                        <Input
-                          type="number"
-                          min="0"
-                          value={quantity}
-                          onChange={(e) => setQuantity(e.target.value)}
-                          placeholder="Qty"
-                          className="w-full sm:w-20 rounded-r-none"
-                        />
-                        <Button
-                          type="button"
-                          className="rounded-l-none"
-                          onClick={handleAddItem}
-                          disabled={!selectedProduct}
-                        >
-                          Add
-                        </Button>
-                      </div>
+                          } else {
+                            setShowProductResults(false);
+                          }
+                        }}
+                        placeholder="Search products"
+                        className="rounded-r-none"
+                      />
+                      <Input
+                        type="number"
+                        min="0"
+                        value={quantity}
+                        onChange={(e) => setQuantity(e.target.value)}
+                        placeholder="Qty"
+                        className="w-full sm:w-20 rounded-r-none rounded-l-none border-l-0"
+                      />
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={price}
+                        onChange={(e) => setPrice(e.target.value)}
+                        placeholder="Price"
+                        className="w-full sm:w-24 rounded-l-none rounded-r-none border-l-0"
+                      />
+                      <Button
+                        type="button"
+                        onClick={handleAddItem}
+                        disabled={!selectedProduct || !quantity || !price}
+                        className="rounded-l-none"
+                      >
+                        Add
+                      </Button>
                     </div>
                     
                     {/* Search results */}
@@ -769,7 +783,6 @@ export default function UpdateOrderForm({ order, onSuccess, onCancel }: UpdateOr
                                       <div className="font-medium">{product.name}</div>
                                     </div>
                                     <div className="text-right">
-                                      <div>₹{product.price.toFixed(2)}</div>
                                       <div className={cn(
                                         "text-xs",
                                         product.stock <= 5 ? "text-destructive" : "text-muted-foreground"

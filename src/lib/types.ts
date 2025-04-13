@@ -35,7 +35,6 @@ export interface Product {
   id?: string;
   _id?: string; // MongoDB ID
   name: string;
-  price: number;
   stock: number;
   dimension?: ProductDimension;
   threshold?: number; // Add threshold field with default

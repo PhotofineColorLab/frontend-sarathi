@@ -100,6 +100,7 @@ export default function OrderForm({ onSuccess, initialOrder, onCancel }: OrderFo
   });
   const [selectedProduct, setSelectedProduct] = useState<string>('');
   const [quantity, setQuantity] = useState<string>('');
+  const [price, setPrice] = useState<string>('');
   const [staffMembers, setStaffMembers] = useState<User[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [productsLoading, setProductsLoading] = useState(true);
@@ -107,7 +108,6 @@ export default function OrderForm({ onSuccess, initialOrder, onCancel }: OrderFo
   const [showProductResults, setShowProductResults] = useState(false);
   const [isCreateProductDialogOpen, setIsCreateProductDialogOpen] = useState(false);
   const [newProductName, setNewProductName] = useState('');
-  const [newProductPrice, setNewProductPrice] = useState('');
   const [newProductStock, setNewProductStock] = useState('');
   const [newProductDimension, setNewProductDimension] = useState<ProductDimension>('Pc');
   const [isCreatingProduct, setIsCreatingProduct] = useState(false);
@@ -158,6 +158,7 @@ export default function OrderForm({ onSuccess, initialOrder, onCancel }: OrderFo
   const handleSelectProduct = (product: Product) => {
     setSelectedProduct(product._id || product.id);
     setProductSearch(product.name);
+    setPrice('');
     setShowProductResults(false);
   };
   
@@ -210,13 +211,16 @@ export default function OrderForm({ onSuccess, initialOrder, onCancel }: OrderFo
   // Add item to order
   const handleAddItem = () => {
     const quantityValue = parseInt(quantity) || 0;
-    if (!selectedProduct || quantityValue <= 0) return;
+    const priceValue = parseFloat(price) || 0;
+    if (!selectedProduct || quantityValue <= 0 || priceValue <= 0) return;
     
     const product = products.find(p => p._id === selectedProduct || p.id === selectedProduct);
     if (!product) return;
     
-    // Check if we already have this product in our items
-    const existingItemIndex = orderItems.findIndex(item => item.productId === selectedProduct);
+    // Check if we already have this product in our items (match by both productId and price)
+    const existingItemIndex = orderItems.findIndex(
+      item => item.productId === selectedProduct && item.price === priceValue
+    );
     
     if (existingItemIndex >= 0) {
       // Update the existing item
@@ -230,7 +234,7 @@ export default function OrderForm({ onSuccess, initialOrder, onCancel }: OrderFo
         productId: product._id || product.id || '',
         productName: product.name,
         quantity: quantityValue,
-        price: product.price,
+        price: priceValue,
         dimension: product.dimension
       };
       setOrderItems([...orderItems, newItem]);
@@ -239,6 +243,7 @@ export default function OrderForm({ onSuccess, initialOrder, onCancel }: OrderFo
     // Reset selection
     setSelectedProduct('');
     setQuantity('');
+    setPrice('');
     setProductSearch('');
     setShowProductResults(false);
   };
@@ -416,35 +421,33 @@ export default function OrderForm({ onSuccess, initialOrder, onCancel }: OrderFo
 
   // Handle create new product
   const handleCreateProduct = async () => {
-    if (!newProductName || !newProductPrice || !newProductStock) {
-      toast.error('Please fill all required fields');
+    if (!newProductName || !newProductStock) {
+      toast.error('Please fill in all required fields');
       return;
     }
-
+    
     setIsCreatingProduct(true);
     
     try {
+      // Prepare the product data
       const productData = {
         name: newProductName,
-        price: parseFloat(newProductPrice),
         stock: parseInt(newProductStock),
-        dimension: newProductDimension
+        dimension: newProductDimension,
       };
-
-      console.log('Creating product with data:', productData);
       
+      // Create the product
       const newProduct = await createProduct(productData);
       
-      // Add the new product to the products list
+      // Add it to the products list
       setProducts([newProduct, ...products]);
       
       // Auto-select the new product
       setSelectedProduct(newProduct._id || newProduct.id);
       setProductSearch(newProduct.name);
       
-      // Reset form
+      // Reset form fields
       setNewProductName('');
-      setNewProductPrice('');
       setNewProductStock('');
       setNewProductDimension('Pc');
       
@@ -770,35 +773,46 @@ export default function OrderForm({ onSuccess, initialOrder, onCancel }: OrderFo
               <h3 className="text-md sm:text-lg font-medium">Order Items</h3>
               
               <div className="space-y-2">
-                <div className="relative" ref={searchRef}>
-                  <div className="flex flex-col sm:flex-row gap-2">
-                    <div className="relative flex-1">
-                      <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <div ref={searchRef} className="relative mb-4">
+                  <Label htmlFor="product">Product</Label>
+                  <div className="mt-1.5">
+                    <div className="flex">
                       <Input
-                        placeholder="Search products by name or create new..."
-                        className="pl-8"
+                        type="text"
                         value={productSearch}
                         onChange={(e) => {
                           setProductSearch(e.target.value);
-                          setShowProductResults(true);
+                          if (e.target.value.trim() !== '') {
+                            setShowProductResults(true);
+                          } else {
+                            setShowProductResults(false);
+                          }
                         }}
-                        onFocus={() => setShowProductResults(true)}
+                        placeholder="Search products"
+                        className="rounded-r-none"
                       />
-                    </div>
-                    <div className="flex">
                       <Input
                         type="number"
                         min="0"
                         value={quantity}
                         onChange={(e) => setQuantity(e.target.value)}
                         placeholder="Qty"
-                        className="w-full sm:w-20 rounded-r-none"
+                        className="w-full sm:w-20 rounded-r-none rounded-l-none border-l-0"
+                      />
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={price}
+                        onChange={(e) => setPrice(e.target.value)}
+                        placeholder="Price"
+                        className="w-full sm:w-24 rounded-l-none rounded-r-none border-l-0"
                       />
                       <Button
                         type="button"
-                        className="rounded-l-none"
                         onClick={handleAddItem}
-                        disabled={!selectedProduct}
+                        disabled={!selectedProduct || !quantity || !price}
+                        className="rounded-l-none"
                       >
                         Add
                       </Button>
@@ -812,7 +826,7 @@ export default function OrderForm({ onSuccess, initialOrder, onCancel }: OrderFo
                         if (product) {
                           return (
                             <span>
-                              Selected: <strong>{product.name}</strong> (₹{product.price.toFixed(2)}) - 
+                              Selected: <strong>{product.name}</strong> - 
                               <span className="font-medium">{product.dimension || 'Pc'}</span>
                             </span>
                           );
@@ -881,7 +895,6 @@ export default function OrderForm({ onSuccess, initialOrder, onCancel }: OrderFo
                                   </div>
                                 </div>
                                 <div className="text-right">
-                                  <div>₹{product.price.toFixed(2)}</div>
                                   <div className={cn(
                                     "text-xs",
                                     product.stock <= 5 ? "text-destructive" : "text-muted-foreground"
@@ -977,57 +990,42 @@ export default function OrderForm({ onSuccess, initialOrder, onCancel }: OrderFo
 
       {/* Create Product Dialog */}
       <Dialog open={isCreateProductDialogOpen} onOpenChange={setIsCreateProductDialogOpen}>
-        <DialogContent className="sm:max-w-[425px] p-4 sm:p-6">
+        <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Create New Product</DialogTitle>
             <DialogDescription>
-              Add a new product to your inventory. This product will be automatically added to your order.
+              Fill in the details for your new product.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="productName">Product Name</Label>
+            <div className="grid gap-2">
+              <Label htmlFor="new-product-name">Product Name</Label>
               <Input
-                id="productName"
+                id="new-product-name"
                 value={newProductName}
                 onChange={(e) => setNewProductName(e.target.value)}
                 placeholder="Enter product name"
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="productPrice">Price</Label>
-                <Input
-                  id="productPrice"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={newProductPrice}
-                  onChange={(e) => setNewProductPrice(e.target.value)}
-                  placeholder="0.00"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="productStock">Stock</Label>
-                <Input
-                  id="productStock"
-                  type="number"
-                  min="0"
-                  step="1"
-                  value={newProductStock}
-                  onChange={(e) => setNewProductStock(e.target.value)}
-                  placeholder="0"
-                />
-              </div>
+            <div className="grid gap-2">
+              <Label htmlFor="new-product-stock">Initial Stock</Label>
+              <Input
+                id="new-product-stock"
+                type="number"
+                min="0"
+                value={newProductStock}
+                onChange={(e) => setNewProductStock(e.target.value)}
+                placeholder="Enter initial stock"
+              />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="productDimension">Dimension</Label>
+            <div className="grid gap-2">
+              <Label htmlFor="new-product-dimension">Unit/Dimension</Label>
               <Select 
-                value={newProductDimension}
+                value={newProductDimension} 
                 onValueChange={(value) => setNewProductDimension(value as ProductDimension)}
               >
-                <SelectTrigger id="productDimension">
-                  <SelectValue placeholder="Select dimension" />
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a dimension" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Bag">Bag</SelectItem>
@@ -1043,23 +1041,15 @@ export default function OrderForm({ onSuccess, initialOrder, onCancel }: OrderFo
                   <SelectItem value="Pc">Pc</SelectItem>
                   <SelectItem value="Pkt">Pkt</SelectItem>
                   <SelectItem value="Set">Set</SelectItem>
-                  <SelectItem value="Not Applicable">Not Applicable</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
           <DialogFooter>
-            <Button 
-              variant="outline" 
-              onClick={() => setIsCreateProductDialogOpen(false)}
-            >
+            <Button variant="outline" onClick={() => setIsCreateProductDialogOpen(false)}>
               Cancel
             </Button>
-            <Button 
-              type="submit" 
-              onClick={handleCreateProduct}
-              disabled={isCreatingProduct}
-            >
+            <Button onClick={handleCreateProduct} disabled={isCreatingProduct}>
               {isCreatingProduct && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Create Product
             </Button>

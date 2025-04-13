@@ -64,7 +64,6 @@ export default function Products() {
   
   // Form states
   const [productName, setProductName] = useState('');
-  const [productPrice, setProductPrice] = useState('');
   const [productStock, setProductStock] = useState('');
   const [productDimension, setProductDimension] = useState<ProductDimension>('Pc');
   const [productThreshold, setProductThreshold] = useState('');
@@ -122,7 +121,6 @@ export default function Products() {
   useEffect(() => {
     if (selectedProduct && isEditing) {
       setProductName(selectedProduct.name || '');
-      setProductPrice(selectedProduct.price.toString() || '');
       setProductStock(selectedProduct.stock.toString() || '');
       setProductDimension((selectedProduct.dimension as ProductDimension) || 'Pc');
       setProductThreshold(selectedProduct.threshold?.toString() || '');
@@ -141,7 +139,6 @@ export default function Products() {
 
   const resetForm = () => {
     setProductName('');
-    setProductPrice('');
     setProductStock('');
     setProductDimension('Pc');
     setProductThreshold('');
@@ -248,7 +245,6 @@ export default function Products() {
       
       const formData = {
         name: productName,
-        price: parseFloat(productPrice),
         stock: parseInt(productStock),
         dimension: productDimension,
         threshold: thresholdValue
@@ -405,7 +401,6 @@ export default function Products() {
                       </Badge>
                     </div>
                     <div className="flex justify-between items-center">
-                      <p className="font-semibold">₹{product.price.toLocaleString()}</p>
                       <div className="flex space-x-1">
                         <Button 
                           variant="ghost" 
@@ -437,7 +432,6 @@ export default function Products() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Name</TableHead>
-                    <TableHead>Price</TableHead>
                     <TableHead>Stock</TableHead>
                     <TableHead>Dimension</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
@@ -467,7 +461,6 @@ export default function Products() {
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell>₹{product.price.toLocaleString()}</TableCell>
                       <TableCell>
                         <Badge variant={typeof product.threshold === 'number' && product.stock < product.threshold ? "destructive" : "default"}>
                           {product.stock > 0 ? `${product.stock} in stock` : 'Out of stock'}
@@ -543,21 +536,6 @@ export default function Products() {
               "grid gap-4",
               isMobile ? "grid-cols-1" : "grid-cols-1 md:grid-cols-2"
             )}>
-              <div className="space-y-2">
-                <Label htmlFor="price" className={cn(isMobile && "text-sm")}>Price</Label>
-                <Input
-                  id="price"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={productPrice}
-                  onChange={(e) => setProductPrice(e.target.value)}
-                  placeholder="0.00"
-                  required
-                  className={cn(isMobile && "h-9 text-sm")}
-                />
-              </div>
-              
               <div className="space-y-2">
                 <Label htmlFor="stock" className={cn(isMobile && "text-sm")}>Stock</Label>
                 <Input

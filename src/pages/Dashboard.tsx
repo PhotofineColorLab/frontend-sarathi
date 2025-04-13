@@ -352,7 +352,7 @@ export default function Dashboard() {
                                 "text-muted-foreground",
                                 isSmallMobile ? "col-span-2" : "col-span-2"
                               )}>
-                                {formatCurrency(product.price)}
+                                {product.name}
                               </div>
                               <div className={cn(
                                 isSmallMobile ? "col-span-2" : "col-span-3"
