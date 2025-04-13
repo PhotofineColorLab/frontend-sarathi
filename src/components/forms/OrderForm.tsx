@@ -110,6 +110,7 @@ export default function OrderForm({ onSuccess, initialOrder, onCancel }: OrderFo
   const [newProductName, setNewProductName] = useState('');
   const [newProductStock, setNewProductStock] = useState('');
   const [newProductDimension, setNewProductDimension] = useState<ProductDimension>('Pc');
+  const [newProductThreshold, setNewProductThreshold] = useState('');
   const [isCreatingProduct, setIsCreatingProduct] = useState(false);
   
   // Ref for detecting clicks outside the search dropdown
@@ -429,11 +430,15 @@ export default function OrderForm({ onSuccess, initialOrder, onCancel }: OrderFo
     setIsCreatingProduct(true);
     
     try {
+      // Parse the threshold value as number or undefined if empty
+      const thresholdValue = newProductThreshold ? parseInt(newProductThreshold) : undefined;
+      
       // Prepare the product data
       const productData = {
         name: newProductName,
         stock: parseInt(newProductStock),
         dimension: newProductDimension,
+        threshold: thresholdValue,
       };
       
       // Create the product
@@ -450,6 +455,7 @@ export default function OrderForm({ onSuccess, initialOrder, onCancel }: OrderFo
       setNewProductName('');
       setNewProductStock('');
       setNewProductDimension('Pc');
+      setNewProductThreshold('');
       
       // Close dialog
       setIsCreateProductDialogOpen(false);
@@ -1017,6 +1023,20 @@ export default function OrderForm({ onSuccess, initialOrder, onCancel }: OrderFo
                 onChange={(e) => setNewProductStock(e.target.value)}
                 placeholder="Enter initial stock"
               />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="new-product-threshold">Low Stock Threshold</Label>
+              <Input
+                id="new-product-threshold"
+                type="number"
+                min="1"
+                value={newProductThreshold}
+                onChange={(e) => setNewProductThreshold(e.target.value)}
+                placeholder="Enter threshold value"
+              />
+              <p className="text-xs text-muted-foreground">
+                Alert will be shown when stock is below this number
+              </p>
             </div>
             <div className="grid gap-2">
               <Label htmlFor="new-product-dimension">Unit/Dimension</Label>
