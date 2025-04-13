@@ -31,6 +31,7 @@ import { fetchStaff } from '@/lib/api';
 import { useIsMobile, useIsTablet } from '@/hooks/use-mobile';
 import { Trash2, Clipboard, Printer } from 'lucide-react';
 import { cn, generateOrderPDF } from '@/lib/utils';
+import { Card, CardContent } from '@/components/ui/card';
 
 interface OrderViewDialogProps {
   isOpen: boolean;
@@ -120,15 +121,18 @@ export function OrderViewDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Order Details</DialogTitle>
-          <DialogDescription>
+      <DialogContent className={cn(
+        "sm:max-w-[800px] max-h-[90vh] overflow-y-auto",
+        isMobile && "p-3 w-[95vw] max-w-full"
+      )}>
+        <DialogHeader className={cn(isMobile && "mb-2")}>
+          <DialogTitle className={cn(isMobile && "text-lg")}>Order Details</DialogTitle>
+          <DialogDescription className={cn(isMobile && "text-xs")}>
             View the complete details of this order.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-6 mt-4">
+        <div className={cn("space-y-6 mt-4", isMobile && "space-y-4 mt-2")}>
           {/* Mobile/Tablet status change options */}
           {isMobileOrTablet && (
             <div className="border rounded-md p-4 space-y-4">
@@ -182,7 +186,7 @@ export function OrderViewDialog({
 
           {order.orderImage && (
             <div className="w-full">
-              <p className="text-sm font-medium mb-2">Order Image</p>
+              <p className={cn("font-medium mb-2", isMobile ? "text-xs" : "text-sm")}>Order Image</p>
               <div className="border rounded-md overflow-hidden">
                 <img 
                   src={order.orderImage} 
@@ -196,24 +200,27 @@ export function OrderViewDialog({
             </div>
           )}
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <p className="text-sm font-medium">Order ID</p>
-              <p className="text-sm text-muted-foreground">{getDisplayOrderId(order)}</p>
+          <div className={cn(
+            "grid gap-4",
+            isMobile ? "grid-cols-2 gap-3" : "grid-cols-1 sm:grid-cols-2"
+          )}>
+            <div className={cn(isMobile && "col-span-2")}>
+              <p className={cn("font-medium", isMobile ? "text-xs" : "text-sm")}>Order ID</p>
+              <p className={cn("text-muted-foreground", isMobile ? "text-xs" : "text-sm")}>{getDisplayOrderId(order)}</p>
             </div>
-            <div>
-              <p className="text-sm font-medium">Date</p>
-              <p className="text-sm text-muted-foreground">
+            <div className={cn(isMobile && "col-span-2")}>
+              <p className={cn("font-medium", isMobile ? "text-xs" : "text-sm")}>Date</p>
+              <p className={cn("text-muted-foreground", isMobile ? "text-xs" : "text-sm")}>
                 {format(new Date(order.createdAt), 'MMM dd, yyyy')}
               </p>
             </div>
-            <div>
-              <p className="text-sm font-medium">Customer</p>
-              <p className="text-sm text-muted-foreground">{order.customerName}</p>
+            <div className={cn(isMobile && "col-span-2")}>
+              <p className={cn("font-medium", isMobile ? "text-xs" : "text-sm")}>Customer</p>
+              <p className={cn("text-muted-foreground", isMobile ? "text-xs" : "text-sm")}>{order.customerName}</p>
             </div>
-            <div>
-              <p className="text-sm font-medium">Status</p>
-              <p className="text-sm mt-1 flex items-center gap-2">
+            <div className={cn(isMobile && "col-span-2")}>
+              <p className={cn("font-medium", isMobile ? "text-xs" : "text-sm")}>Status</p>
+              <p className={cn("mt-1 flex items-center gap-2", isMobile ? "text-xs" : "text-sm")}>
                 <OrderStatusBadge order={order} />
                 <PaymentStatusBadge 
                   order={order} 
@@ -225,108 +232,147 @@ export function OrderViewDialog({
               </p>
             </div>
             <div>
-              <p className="text-sm font-medium">Payment Condition</p>
-              <p className="text-sm text-muted-foreground">
+              <p className={cn("font-medium", isMobile ? "text-xs" : "text-sm")}>Payment Condition</p>
+              <p className={cn("text-muted-foreground", isMobile ? "text-xs" : "text-sm")}>
                 {getPaymentConditionText(order.paymentCondition)}
               </p>
             </div>
             <div>
-              <p className="text-sm font-medium">Priority</p>
-              <p className="text-sm text-muted-foreground">
+              <p className={cn("font-medium", isMobile ? "text-xs" : "text-sm")}>Priority</p>
+              <p className={cn("text-muted-foreground", isMobile ? "text-xs" : "text-sm")}>
                 {getPriorityText(order.priority)}
               </p>
             </div>
             <div>
-              <p className="text-sm font-medium">Assigned To</p>
-              <p className="text-sm text-muted-foreground">
+              <p className={cn("font-medium", isMobile ? "text-xs" : "text-sm")}>Assigned To</p>
+              <p className={cn("text-muted-foreground", isMobile ? "text-xs" : "text-sm")}>
                 {getAssignedStaffName()}
               </p>
             </div>
             {order.paidAt && (
               <div>
-                <p className="text-sm font-medium">Payment Date</p>
-                <p className="text-sm text-muted-foreground">
+                <p className={cn("font-medium", isMobile ? "text-xs" : "text-sm")}>Payment Date</p>
+                <p className={cn("text-muted-foreground", isMobile ? "text-xs" : "text-sm")}>
                   {format(new Date(order.paidAt.toString()), 'MMM dd, yyyy')}
                 </p>
               </div>
             )}
             {order.dispatchDate && (
               <div>
-                <p className="text-sm font-medium">Dispatch Date</p>
-                <p className="text-sm text-muted-foreground">
+                <p className={cn("font-medium", isMobile ? "text-xs" : "text-sm")}>Dispatch Date</p>
+                <p className={cn("text-muted-foreground", isMobile ? "text-xs" : "text-sm")}>
                   {format(new Date(order.dispatchDate), 'MMM dd, yyyy')}
                 </p>
               </div>
             )}
             {order.customerEmail && (
-              <div>
-                <p className="text-sm font-medium">Email</p>
-                <p className="text-sm text-muted-foreground">{order.customerEmail}</p>
+              <div className={cn(isMobile && "col-span-2")}>
+                <p className={cn("font-medium", isMobile ? "text-xs" : "text-sm")}>Email</p>
+                <p className={cn("text-muted-foreground break-words", isMobile ? "text-xs" : "text-sm")}>{order.customerEmail}</p>
               </div>
             )}
             {order.customerPhone && (
               <div>
-                <p className="text-sm font-medium">Phone</p>
-                <p className="text-sm text-muted-foreground">{order.customerPhone}</p>
+                <p className={cn("font-medium", isMobile ? "text-xs" : "text-sm")}>Phone</p>
+                <p className={cn("text-muted-foreground", isMobile ? "text-xs" : "text-sm")}>{order.customerPhone}</p>
               </div>
             )}
             {order.customerAddress && (
-              <div>
-                <p className="text-sm font-medium">Address</p>
-                <p className="text-sm text-muted-foreground">{order.customerAddress}</p>
+              <div className={cn(isMobile && "col-span-2")}>
+                <p className={cn("font-medium", isMobile ? "text-xs" : "text-sm")}>Address</p>
+                <p className={cn("text-muted-foreground", isMobile ? "text-xs" : "text-sm")}>{order.customerAddress}</p>
               </div>
             )}
           </div>
 
-          <div className="mt-6">
-            <p className="text-sm font-medium mb-2">Items</p>
+          <div className={cn("mt-6", isMobile && "mt-4")}>
+            <p className={cn("font-medium mb-2", isMobile ? "text-xs" : "text-sm")}>Items</p>
             <div className="border rounded-md overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="min-w-[200px]">Item</TableHead>
-                    <TableHead className="text-right w-[100px]">Qty</TableHead>
-                    <TableHead className="text-right w-[120px]">Price</TableHead>
-                    <TableHead className="text-right w-[120px]">Total</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
+              {isMobile ? (
+                <div className="p-2 space-y-3">
                   {(order.orderItems || order.items || []).map((item, index) => (
-                    <TableRow key={item._id || item.id || index}>
-                      <TableCell className="max-w-[300px] truncate">{item.productName}</TableCell>
-                      <TableCell className="text-right">{item.quantity}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(item.price)}</TableCell>
-                      <TableCell className="text-right">
-                        {formatCurrency(item.price * item.quantity)}
-                      </TableCell>
-                    </TableRow>
+                    <Card key={item._id || item.id || index} className="overflow-hidden">
+                      <CardContent className="p-3">
+                        <div className="text-xs font-medium mb-2 truncate">{item.productName}</div>
+                        <div className="grid grid-cols-3 text-xs">
+                          <div>
+                            <span className="text-muted-foreground">Quantity:</span>
+                            <div className="font-medium">{item.quantity}</div>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">Price:</span>
+                            <div className="font-medium">{formatCurrency(item.price)}</div>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">Total:</span>
+                            <div className="font-medium">{formatCurrency(item.price * item.quantity)}</div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
                   ))}
-                </TableBody>
-              </Table>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className={cn("min-w-[160px]", isMobile && "text-xs py-2")}>Item</TableHead>
+                      <TableHead className={cn("text-right w-[80px]", isMobile && "text-xs py-2")}>Qty</TableHead>
+                      <TableHead className={cn("text-right w-[100px]", isMobile && "text-xs py-2")}>Price</TableHead>
+                      <TableHead className={cn("text-right w-[100px]", isMobile && "text-xs py-2")}>Total</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {(order.orderItems || order.items || []).map((item, index) => (
+                      <TableRow key={item._id || item.id || index}>
+                        <TableCell className={cn("max-w-[200px] truncate", isMobile && "text-xs py-2")}>
+                          {item.productName}
+                        </TableCell>
+                        <TableCell className={cn("text-right", isMobile && "text-xs py-2")}>
+                          {item.quantity}
+                        </TableCell>
+                        <TableCell className={cn("text-right", isMobile && "text-xs py-2")}>
+                          {formatCurrency(item.price)}
+                        </TableCell>
+                        <TableCell className={cn("text-right", isMobile && "text-xs py-2")}>
+                          {formatCurrency(item.price * item.quantity)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
             </div>
           </div>
 
-          <div className="flex justify-between pt-4 border-t">
-            <p className="text-sm font-medium">Total</p>
-            <p className="text-lg font-semibold">{formatCurrency(order.total)}</p>
+          <div className={cn("flex justify-between pt-4 border-t", isMobile && "pt-3")}>
+            <p className={cn("font-medium", isMobile ? "text-sm" : "text-sm")}>Total</p>
+            <p className={cn(isMobile ? "text-base font-bold" : "text-lg font-semibold")}>
+              {formatCurrency(order.total)}
+            </p>
           </div>
         </div>
 
-        <DialogFooter className="mt-6">
-          <div className="flex flex-col sm:flex-row gap-2 w-full">
+        <DialogFooter className={cn("mt-6", isMobile && "mt-4 flex-col gap-2")}>
+          <div className={cn(
+            "flex gap-2 w-full", 
+            isMobile ? "flex-col" : "flex-col sm:flex-row"
+          )}>
             <Button
               variant="outline"
               onClick={() => onOpenChange(false)}
-              className="w-full sm:w-auto"
+              className="w-full"
+              size={isMobile ? "sm" : "default"}
             >
               Close
             </Button>
             <Button
               variant="outline"
               onClick={() => generateOrderPDF(order)}
-              className="w-full sm:w-auto"
+              className="w-full"
+              size={isMobile ? "sm" : "default"}
             >
-              <Printer className="h-4 w-4 mr-2" />
+              <Printer className={cn("mr-2", isMobile ? "h-3 w-3" : "h-4 w-4")} />
               Print to PDF
             </Button>
             {onEditOrder && (
@@ -335,7 +381,8 @@ export function OrderViewDialog({
                   onEditOrder(order);
                   onOpenChange(false);
                 }}
-                className="w-full sm:w-auto"
+                className="w-full"
+                size={isMobile ? "sm" : "default"}
               >
                 Edit Order
               </Button>

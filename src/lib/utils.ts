@@ -28,13 +28,41 @@ export const generateOrderPDF = (order: Order) => {
     doc.text('Customer Information', 14, 55);
     doc.setFontSize(12);
     doc.text(`Name: ${order.customerName || 'N/A'}`, 14, 65);
-    if (order.customerEmail) doc.text(`Email: ${order.customerEmail}`, 14, 72);
-    if (order.customerPhone) doc.text(`Phone: ${order.customerPhone}`, 14, 79);
-    if (order.customerAddress) doc.text(`Address: ${order.customerAddress}`, 14, 86);
+    
+    let lineY = 72;
+    if (order.customerEmail) {
+      doc.text(`Email: ${order.customerEmail}`, 14, lineY);
+      lineY += 7;
+    }
+    
+    if (order.customerPhone) {
+      doc.text(`Phone: ${order.customerPhone}`, 14, lineY);
+      lineY += 7;
+    }
+    
+    if (order.customerAddress) {
+      // Handle address with proper formatting
+      doc.text('Address:', 14, lineY);
+      lineY += 7;
+      
+      // Split address into multiple lines if needed
+      const addressLines = order.customerAddress.split(',');
+      addressLines.forEach((line, index) => {
+        const trimmedLine = line.trim();
+        if (trimmedLine) {
+          doc.text(trimmedLine, 24, lineY + (index * 6));
+        }
+      });
+      
+      // Adjust the Y position based on address length
+      lineY += Math.max(8, addressLines.length * 6 + 2);
+    } else {
+      lineY += 7;
+    }
     
     // Order items table
     doc.setFontSize(14);
-    doc.text('Order Items', 14, 100);
+    doc.text('Order Items', 14, lineY + 8);
     
     // Format table data
     const items = order.orderItems || order.items || [];
@@ -48,7 +76,7 @@ export const generateOrderPDF = (order: Order) => {
     
     // Add items table
     autoTable(doc, {
-      startY: 105,
+      startY: lineY + 13,
       head: [['Item', 'Quantity', 'Unit', 'Price', 'Total']],
       body: tableBody,
       theme: 'striped',
