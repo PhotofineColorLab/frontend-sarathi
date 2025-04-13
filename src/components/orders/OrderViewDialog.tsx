@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { format } from 'date-fns';
 import {
   Dialog,
@@ -24,12 +24,13 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Order, OrderStatus } from '@/lib/types';
+import { Order, OrderStatus, Staff } from '@/lib/types';
 import { OrderStatusBadge } from './OrderStatusBadge';
 import { PaymentStatusBadge } from './PaymentStatusBadge';
 import { fetchStaff } from '@/lib/api';
 import { useIsMobile, useIsTablet } from '@/hooks/use-mobile';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Clipboard, Printer } from 'lucide-react';
+import { cn, generateOrderPDF } from '@/lib/utils';
 
 interface OrderViewDialogProps {
   isOpen: boolean;
@@ -319,6 +320,14 @@ export function OrderViewDialog({
               className="w-full sm:w-auto"
             >
               Close
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => generateOrderPDF(order)}
+              className="w-full sm:w-auto"
+            >
+              <Printer className="h-4 w-4 mr-2" />
+              Print to PDF
             </Button>
             {onEditOrder && (
               <Button

@@ -1,6 +1,6 @@
 import React from 'react';
 import { format } from 'date-fns';
-import { Loader2, MoreHorizontal } from 'lucide-react';
+import { Loader2, MoreHorizontal, Printer } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -22,7 +22,7 @@ import { OrderStatusBadge } from './OrderStatusBadge';
 import { PaymentStatusBadge } from './PaymentStatusBadge';
 import { Order, OrderStatus } from '@/lib/types';
 import { useAuth } from '@/contexts/AuthContext';
-import { cn } from '@/lib/utils';
+import { cn, generateOrderPDF } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 
 interface OrdersTableProps {
@@ -124,6 +124,13 @@ export function OrdersTable({
                         onClick={() => onViewOrder(order)}
                       >
                         View details
+                      </DropdownMenuItem>
+                      
+                      <DropdownMenuItem 
+                        onClick={() => generateOrderPDF(order)}
+                      >
+                        <Printer className="h-4 w-4 mr-2" />
+                        Print to PDF
                       </DropdownMenuItem>
                       
                       {!isExecutive && (isAdmin || (order.assignedTo === user?._id || order.assignedTo === user?.id)) && (

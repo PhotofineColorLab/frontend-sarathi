@@ -32,6 +32,8 @@ import { Button } from '@/components/ui/button';
 import { ChevronLeft } from 'lucide-react';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { Badge } from '@/components/ui/badge';
+import { generateOrderPDF } from '@/lib/utils';
+import { Printer } from 'lucide-react';
 
 export default function Orders() {
   const navigate = useNavigate();
@@ -247,20 +249,37 @@ export default function Orders() {
     return (
       <div 
         className="flex flex-col p-4 border rounded-lg mb-3 bg-card shadow-sm"
-        onClick={() => onViewOrder(order)}
       >
         <div className="flex justify-between items-start mb-2">
-          <div>
-            <h3 className="font-medium text-sm">{order.customerName}</h3>
-            <p className="text-xs text-muted-foreground">{getDisplayOrderId(order)}</p>
-          </div>
-          <div className="flex flex-col items-end">
-            <p className="font-semibold">{formatCurrency(order.total)}</p>
-            <p className="text-xs text-muted-foreground">
-              {format(new Date(order.createdAt), 'MMM dd, yyyy')}
-            </p>
+          <h3 
+            className="font-semibold text-sm cursor-pointer hover:text-primary"
+            onClick={() => onViewOrder(order)}
+          >
+            {getDisplayOrderId(order)}
+          </h3>
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="h-8 w-8 p-0"
+              onClick={() => generateOrderPDF(order)}
+              title="Print to PDF"
+            >
+              <Printer className="h-4 w-4" />
+            </Button>
           </div>
         </div>
+        
+        <div
+          className="cursor-pointer"
+          onClick={() => onViewOrder(order)}
+        >
+          <p className="font-medium text-base mb-1">{order.customerName}</p>
+          <p className="text-xs text-muted-foreground mb-2">
+            {format(new Date(order.createdAt), 'MMM dd, yyyy')}
+          </p>
+        </div>
+
         <div className="flex items-center justify-between mt-1">
           <div className="flex items-center gap-2">
             <OrderStatusBadge order={order} />
@@ -273,6 +292,20 @@ export default function Orders() {
               </Badge>
             )}
           </div>
+        </div>
+
+        <div className="flex items-center justify-between mt-2">
+          <p className="font-bold">
+            {formatCurrency(order.total)}
+          </p>
+          <Button 
+            variant="outline" 
+            size="sm"
+            className="h-8 text-xs"
+            onClick={() => onViewOrder(order)}
+          >
+            View Details
+          </Button>
         </div>
       </div>
     );
