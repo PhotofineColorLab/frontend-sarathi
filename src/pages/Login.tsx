@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LockKeyhole, Mail } from 'lucide-react';
+import { LockKeyhole, Mail, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,6 +13,7 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const { login, isAuthenticated, loading } = useAuth();
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -30,20 +31,12 @@ export default function Login() {
       return;
     }
     
+    setIsLoggingIn(true);
     try {
       await login(email, password);
     } catch (err) {
       setError('Invalid email or password');
-    }
-  };
-
-  const loginAsAdmin = async () => {
-    setEmail('admin@electrical.com');
-    setPassword('admin123');
-    try {
-      await login('admin@electrical.com', 'admin123');
-    } catch (err) {
-      setError('Failed to login with admin credentials. Make sure the server is running.');
+      setIsLoggingIn(false);
     }
   };
 
@@ -83,6 +76,7 @@ export default function Login() {
                     className="pl-10"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
+                    disabled={isLoggingIn}
                   />
                 </div>
               </div>
@@ -94,12 +88,14 @@ export default function Login() {
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  disabled={isLoggingIn}
                 />
               </div>
             </CardContent>
             <CardFooter>
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? 'Signing in...' : 'Sign In'}
+              <Button type="submit" className="w-full" disabled={isLoggingIn || loading}>
+                {(isLoggingIn || loading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {isLoggingIn ? 'Signing in...' : 'Sign In'}
               </Button>
             </CardFooter>
           </form>
