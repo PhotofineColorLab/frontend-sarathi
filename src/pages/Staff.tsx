@@ -81,9 +81,9 @@ export default function Staff() {
   
   // Form states
   const [staffName, setStaffName] = useState('');
-  const [staffEmail, setStaffEmail] = useState('');
-  const [staffRole, setStaffRole] = useState<UserRole>('staff');
   const [staffPhone, setStaffPhone] = useState('');
+  const [staffRole, setStaffRole] = useState<UserRole>('staff');
+  const [staffEmail, setStaffEmail] = useState('');
   const [staffPassword, setStaffPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   
@@ -125,9 +125,9 @@ export default function Staff() {
   
   const resetForm = () => {
     setStaffName('');
-    setStaffEmail('');
-    setStaffRole('staff');
     setStaffPhone('');
+    setStaffRole('staff');
+    setStaffEmail('');
     setStaffPassword('');
     setShowPassword(false);
     setIsEditing(false);
@@ -138,9 +138,9 @@ export default function Staff() {
     if (staff) {
       setSelectedStaff(staff);
       setStaffName(staff.name);
-      setStaffEmail(staff.email);
+      setStaffPhone(staff.phone);
       setStaffRole(staff.role);
-      setStaffPhone(staff.phone || '');
+      setStaffEmail(staff.email || '');
       setStaffPassword(''); // Reset password field when editing
       setIsEditing(true);
       console.log('Opening edit form for staff:', staff); // Debug log
@@ -179,9 +179,9 @@ export default function Staff() {
         // Update existing staff
         const updates: Partial<UserType> = {
           name: staffName,
-          email: staffEmail,
+          phone: staffPhone,
           role: staffRole,
-          phone: staffPhone || undefined,
+          email: staffEmail || undefined,
         };
         
         // Only update password if one was provided
@@ -206,9 +206,9 @@ export default function Staff() {
         
         const newStaff = await createStaff({
           name: staffName,
-          email: staffEmail,
+          phone: staffPhone,
           role: staffRole,
-          phone: staffPhone || undefined,
+          email: staffEmail || undefined,
           password: staffPassword,
         });
         
@@ -231,7 +231,7 @@ export default function Staff() {
         if (error.message.includes('Invalid role')) {
           setError('Please select a valid role from the dropdown menu');
         } else if (error.message.includes('Duplicate')) {
-          setError('A staff member with this email already exists');
+          setError('A staff member with this phone number already exists');
         } else if (error.message.includes('permission')) {
           setError('You do not have permission to perform this action');
         } else {
@@ -247,7 +247,7 @@ export default function Staff() {
 
   const filteredStaff = staff.filter(s => 
     s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    s.email.toLowerCase().includes(searchTerm.toLowerCase())
+    s.phone.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   // Fetch staff attendance data for the selected date
@@ -442,7 +442,7 @@ export default function Staff() {
                         </Avatar>
                         <div>
                           <h3 className="font-medium">{member.name}</h3>
-                          <p className="text-sm text-muted-foreground">{member.email}</p>
+                          <p className="text-sm text-muted-foreground">{member.phone}</p>
                         </div>
                       </div>
                       
@@ -513,8 +513,8 @@ export default function Staff() {
                   <TableRow>
                     <TableHead>Staff Member</TableHead>
                     <TableHead>Role</TableHead>
-                    <TableHead>Email</TableHead>
                     <TableHead>Phone</TableHead>
+                    <TableHead>Email</TableHead>
                     <TableHead>Joined</TableHead>
                     <TableHead className="w-[100px]">Actions</TableHead>
                   </TableRow>
@@ -547,9 +547,9 @@ export default function Staff() {
                                 : 'Staff Member'}
                           </Badge>
                       </TableCell>
-                      <TableCell>{member.email}</TableCell>
-                        <TableCell>{member.phone || 'N/A'}</TableCell>
-                        <TableCell>{member.createdAt ? format(new Date(member.createdAt), 'PP') : 'N/A'}</TableCell>
+                      <TableCell>{member.phone || 'N/A'}</TableCell>
+                      <TableCell>{member.email || 'N/A'}</TableCell>
+                      <TableCell>{member.createdAt ? format(new Date(member.createdAt), 'PP') : 'N/A'}</TableCell>
                       <TableCell>
                           <div className="flex justify-end">
                         <DropdownMenu>
@@ -800,12 +800,13 @@ export default function Staff() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="phone">Phone Number</Label>
               <Input
-                id="email"
-                type="email"
-                value={staffEmail}
-                onChange={(e) => setStaffEmail(e.target.value)}
+                id="phone"
+                type="tel"
+                placeholder="9876543210"
+                value={staffPhone}
+                onChange={(e) => setStaffPhone(e.target.value)}
                 required
               />
             </div>
@@ -828,11 +829,12 @@ export default function Staff() {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="phone">Phone (Optional)</Label>
+              <Label htmlFor="email">Email (Optional)</Label>
               <Input
-                id="phone"
-                value={staffPhone}
-                onChange={(e) => setStaffPhone(e.target.value)}
+                id="email"
+                type="email"
+                value={staffEmail}
+                onChange={(e) => setStaffEmail(e.target.value)}
               />
             </div>
             <div className="space-y-2">

@@ -2,7 +2,9 @@ import { Order, OrderStatus, Product, User } from './types';
 
 // API URL setup
 // Use environment variable or fallback to localhost
-const API_URL = import.meta.env.VITE_API_URL || 'https://backend-sarathi.onrender.com/api';
+const API_URL = "https://backend-sarathi.onrender.com/api";
+// const API_URL = "http://localhost:5000/api";
+
 console.log('API URL configured as:', API_URL);
 
 // Debug helper
@@ -38,14 +40,20 @@ const createAuthHeaders = (contentType = 'application/json') => {
 };
 
 // Auth functions
-export const loginStaff = async (email: string, password: string) => {
+export const loginStaff = async (phone: string, password: string) => {
   try {
+    // Validate phone number format
+    const phoneRegex = /^\d{10}$/;
+    if (!phoneRegex.test(phone)) {
+      throw new Error('Please enter a valid 10-digit phone number');
+    }
+    
     const response = await fetch(`${API_URL}/staff/login`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ phone, password }),
     });
 
     if (!response.ok) {
@@ -122,6 +130,12 @@ export const createStaff = async (staffData: Omit<User, 'id' | 'createdAt'>) => 
   console.log('Authorization token present:', !!token);
   
   try {
+    // Validate phone number format
+    const phoneRegex = /^\d{10}$/;
+    if (!phoneRegex.test(staffData.phone)) {
+      throw new Error('Please enter a valid 10-digit phone number');
+    }
+    
     const response = await fetch(`${API_URL}/staff`, {
       method: 'POST',
       headers: {
@@ -190,6 +204,14 @@ export const updateStaff = async (id: string, staffData: Partial<User>) => {
   console.log('Update data:', staffData);
   
   try {
+    // Validate phone number format if provided
+    if (staffData.phone) {
+      const phoneRegex = /^\d{10}$/;
+      if (!phoneRegex.test(staffData.phone)) {
+        throw new Error('Please enter a valid 10-digit phone number');
+      }
+    }
+    
     const response = await fetch(`${API_URL}/staff/${id}`, {
       method: 'PUT',
       headers: {
@@ -626,13 +648,13 @@ export const getAllStaffAttendanceByDate = async (date: string) => {
   return response.json();
 };
 
-export const loginUser = async (email: string, password: string) => {
+export const loginUser = async (phone: string, password: string) => {
   const response = await fetch(`${API_URL}/staff/login`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({ phone, password }),
   });
 
   const data = await response.json();

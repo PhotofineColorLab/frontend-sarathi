@@ -5,10 +5,10 @@ export interface User {
   id: string;
   _id?: string; // MongoDB ID
   name: string;
-  email: string;
+  phone: string;
   role: UserRole;
   avatar?: string;
-  phone?: string;
+  email?: string;
   password?: string; // Add password field for staff login
   createdAt?: string;
   attendance?: {

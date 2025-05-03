@@ -6,7 +6,7 @@ import { User } from '@/lib/types';
 
 interface AuthContextType {
   user: User | null;
-  login: (email: string, password: string) => Promise<void>;
+  login: (phone: string, password: string) => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
   isAdmin: boolean;
@@ -29,9 +29,9 @@ export const AuthProvider = ({ children }) => {
     setLoading(false);
   }, []);
 
-  const login = async (email: string, password: string) => {
+  const login = async (phone: string, password: string) => {
     try {
-      const response = await loginStaff(email, password);
+      const response = await loginStaff(phone, password);
       const userData = response.staff;
       setUser(userData);
       localStorage.setItem('user', JSON.stringify(userData));
@@ -40,7 +40,7 @@ export const AuthProvider = ({ children }) => {
       navigate('/dashboard');
     } catch (error) {
       console.error('Login error:', error);
-      sonnerToast.error(error instanceof Error ? error.message : 'Invalid email or password');
+      sonnerToast.error(error instanceof Error ? error.message : 'Invalid phone or password');
       throw error;
     }
   };

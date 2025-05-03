@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LockKeyhole, Mail, Loader2 } from 'lucide-react';
+import { LockKeyhole, Phone, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,7 +9,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 export default function Login() {
-  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const { login, isAuthenticated, loading } = useAuth();
@@ -26,16 +26,16 @@ export default function Login() {
     e.preventDefault();
     setError('');
     
-    if (!email || !password) {
-      setError('Please enter both email and password');
+    if (!phone || !password) {
+      setError('Please enter both phone number and password');
       return;
     }
     
     setIsLoggingIn(true);
     try {
-      await login(email, password);
+      await login(phone, password);
     } catch (err) {
-      setError('Invalid email or password');
+      setError('Invalid phone number or password');
       setIsLoggingIn(false);
     }
   };
@@ -66,16 +66,16 @@ export default function Login() {
                 </Alert>
               )}
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="phone">Phone Number</Label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
+                  <Phone className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
                   <Input
-                    id="email"
-                    type="email"
-                    placeholder="name@example.com"
+                    id="phone"
+                    type="tel"
+                    placeholder="9876543210"
                     className="pl-10"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
                     disabled={isLoggingIn}
                   />
                 </div>
