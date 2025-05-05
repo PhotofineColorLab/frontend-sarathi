@@ -1,4 +1,4 @@
-// User Types
+// User Type's
 export type UserRole = 'admin' | 'staff' | 'executive';
 
 export interface User {
