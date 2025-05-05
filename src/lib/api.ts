@@ -731,4 +731,35 @@ export const testDeleteProduct = async (id: string) => {
     console.error('Error in test delete product:', error);
     throw error;
   }
+};
+
+// Function to fetch orders created by executive users (for admin analysis)
+export const fetchOrdersByExecutives = async () => {
+  const token = localStorage.getItem('token');
+  
+  // First fetch all staff members who are executives
+  const executives = await fetchStaff().then(staff => 
+    staff.filter(member => member.role === 'executive')
+  );
+  
+  // Early return if no executives found
+  if (!executives.length) {
+    return { executives: [], orders: [] };
+  }
+  
+  // Get IDs of all executives
+  const executiveIds = executives.map(exec => exec._id || exec.id);
+  
+  // Fetch all orders
+  const allOrders = await fetchOrders();
+  
+  // Filter orders created by executives
+  const executiveOrders = allOrders.filter(order => 
+    order.createdBy && executiveIds.includes(order.createdBy)
+  );
+  
+  return {
+    executives,
+    orders: executiveOrders
+  };
 }; 

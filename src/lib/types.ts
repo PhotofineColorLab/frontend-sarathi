@@ -80,6 +80,7 @@ export interface Order {
   dispatchDate?: string;
   scheduledDate?: string;
   assignedTo?: string;
+  createdBy?: string; // ID of the staff member who created the order
   isPaid?: boolean;
   paidAt?: string | Date;
 }
