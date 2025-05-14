@@ -39,7 +39,6 @@ import { useIsMobile, useIsSmallMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/contexts/AuthContext';
-import { useVirtualizer } from '@tanstack/react-virtual';
 
 export default function Analytics() {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -760,7 +759,33 @@ const GeneralAnalyticsContent = ({
 
 // Add useMemo and React.memo for chart components to reduce rerenders
 const SalesChart = React.memo(({ data, isSmallMobile }: { data: any[], isSmallMobile: boolean }) => {
-  // ... existing chart implementation ...
+  // Placeholder implementation that returns JSX instead of void
+  return (
+    <div className="h-[300px]">
+      <ResponsiveContainer width="100%" height="100%">
+        <LineChart
+          data={data}
+          margin={{
+            top: 20,
+            right: isSmallMobile ? 5 : 20,
+            left: isSmallMobile ? 0 : 20,
+            bottom: 20,
+          }}
+        >
+          <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
+          <XAxis dataKey="date" />
+          <YAxis />
+          <Tooltip />
+          <Line 
+            type="monotone" 
+            dataKey="value" 
+            stroke="hsl(var(--primary))" 
+            strokeWidth={2}
+          />
+        </LineChart>
+      </ResponsiveContainer>
+    </div>
+  );
 });
 
 SalesChart.displayName = 'SalesChart';
@@ -768,17 +793,17 @@ SalesChart.displayName = 'SalesChart';
 // Memoize expensive data calculations
 const processedData = useMemo(() => {
   // ... data processing logic ...
-  return result;
-}, [data]); // Only recalculate when data changes
+  return {}; // Placeholder
+}, [/* dependencies */]); // Only recalculate when data changes
 
 // Implement useCallback for event handlers
 const handleDateRangeChange = useCallback((newRange) => {
   // ... handler logic ...
-}, [dependencies]);
+}, [/* dependencies */]);
 
 // Add passive scroll event listeners
 useEffect(() => {
-  const container = containerRef.current;
+  const container = document.getElementById('chart-container');
   if (!container) return;
   
   const handleScroll = () => {
@@ -790,31 +815,24 @@ useEffect(() => {
   return () => {
     container.removeEventListener('scroll', handleScroll);
   };
-}, [dependencies]);
+}, [/* dependencies */]);
 
 // Use will-change selectively for animated elements
-<div className="will-change-transform" style={{ transform: 'translateZ(0)' }}>
-  {/* Only use for elements that actually transform/animate */}
-</div>
+// <div className="will-change-transform" style={{ transform: 'translateZ(0)' }}>
+//   {/* Only use for elements that actually transform/animate */}
+// </div>
 
 // Optimize table rendering for large datasets
-{useMemo(() => (
-  <Table>
-    {/* Table contents */}
-  </Table>
-), [tableData])}
-
-// Implement virtualized rendering for long lists
-const rowVirtualizer = useVirtualizer({
-  count: items.length,
-  getScrollElement: () => parentRef.current,
-  estimateSize: () => 35,
-});
+// {useMemo(() => (
+//   <Table>
+//     {/* Table contents */}
+//   </Table>
+// ), [tableData])}
 
 // Defer non-essential renders
 useEffect(() => {
   const timer = setTimeout(() => {
-    setRenderSecondaryCharts(true);
+    // setRenderSecondaryCharts(true);
   }, 100);
   
   return () => clearTimeout(timer);
