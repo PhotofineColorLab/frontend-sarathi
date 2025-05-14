@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, 
@@ -56,7 +56,7 @@ const NavItem = React.memo(({
       to={href} 
       onClick={onClick}
       className={cn(
-        "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-all duration-200",
+        "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium",
         isActive 
           ? "bg-primary text-primary-foreground shadow-sm" 
           : "text-muted-foreground hover:bg-secondary hover:text-foreground"
@@ -179,6 +179,9 @@ const DashboardLayout = React.memo(({ children }: { children: React.ReactNode })
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const { isAdmin, isExecutive, user, logout } = useAuth();
+  const mainContentRef = useRef<HTMLDivElement>(null);
+  const [isScrolling, setIsScrolling] = useState(false);
+  const scrollTimeout = useRef<NodeJS.Timeout | null>(null);
 
   const handleLogout = useCallback(() => {
     logout();
@@ -196,6 +199,35 @@ const DashboardLayout = React.memo(({ children }: { children: React.ReactNode })
       setSidebarCollapsed(false);
     }
   }, [isMobile, isTablet]);
+
+  // Optimize scroll event handling with throttling and passive listener
+  useEffect(() => {
+    const mainContent = mainContentRef.current;
+    if (!mainContent) return;
+
+    const handleScroll = () => {
+      if (!isScrolling) {
+        setIsScrolling(true);
+      }
+      
+      if (scrollTimeout.current) {
+        clearTimeout(scrollTimeout.current);
+      }
+      
+      scrollTimeout.current = setTimeout(() => {
+        setIsScrolling(false);
+      }, 150);
+    };
+
+    mainContent.addEventListener('scroll', handleScroll, { passive: true });
+    
+    return () => {
+      mainContent.removeEventListener('scroll', handleScroll);
+      if (scrollTimeout.current) {
+        clearTimeout(scrollTimeout.current);
+      }
+    };
+  }, []);
 
   const navigationItems = useMemo(() => [
     {
@@ -242,7 +274,7 @@ const DashboardLayout = React.memo(({ children }: { children: React.ReactNode })
 
   const SidebarContent = useMemo(() => {
     return (
-      <aside className="h-screen flex flex-col bg-card border-r">
+      <aside className="h-screen flex flex-col bg-card border-r will-change-transform">
         <div className="p-4">
           <div className="flex items-center justify-between">
             {!sidebarCollapsed ? (
@@ -275,7 +307,7 @@ const DashboardLayout = React.memo(({ children }: { children: React.ReactNode })
           </div>
         </div>
         <Separator />
-        <nav className="flex-1 overflow-auto p-3 space-y-1">
+        <nav className="flex-1 overflow-y-auto p-3 space-y-1 overscroll-contain">
           {navigationItems.map((item) => (
             <NavItem
               key={item.href}
@@ -304,7 +336,13 @@ const DashboardLayout = React.memo(({ children }: { children: React.ReactNode })
               {SidebarContent}
             </SheetContent>
           </Sheet>
-          <div className="fixed top-4 left-4 right-4 z-40 flex justify-between items-center md:hidden">
+          <div 
+            className={cn(
+              "fixed top-0 left-0 right-0 z-40 p-4 flex justify-between items-center md:hidden",
+              "bg-background/80 backdrop-blur-sm will-change-transform",
+              isScrolling ? "shadow-sm" : ""
+            )}
+          >
             <Button 
               variant="outline" 
               size="icon"
@@ -341,17 +379,29 @@ const DashboardLayout = React.memo(({ children }: { children: React.ReactNode })
           </div>
         </>
       ) : (
-        <div className={cn(
-          "transition-all duration-200 ease-in-out",
-          sidebarCollapsed ? "w-16" : "w-64"
-        )}>
+        <div 
+          className={cn(
+            "will-change-transform",
+            sidebarCollapsed ? "w-16" : "w-64"
+          )}
+          style={{
+            transition: "width 200ms cubic-bezier(0.4, 0, 0.2, 1)"
+          }}
+        >
           {SidebarContent}
         </div>
       )}
       
-      <main className="flex-1 overflow-auto pb-16 md:pb-0">
+      <main 
+        ref={mainContentRef}
+        className="flex-1 overflow-y-auto pb-16 md:pb-0 overscroll-contain will-change-scroll"
+        style={{ 
+          WebkitOverflowScrolling: "touch",
+          contentVisibility: "auto"
+        }}
+      >
         <div className={cn(
-          "container py-6 h-full",
+          "container py-6 h-full transform-gpu",
           isMobile && "pt-20 px-4" // Increased padding-top for mobile menu
         )}>
           {children}
