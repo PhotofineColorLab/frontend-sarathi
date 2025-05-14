@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -35,6 +35,50 @@ import { Badge } from '@/components/ui/badge';
 import { generateOrderPDF } from '@/lib/utils';
 import { Printer } from 'lucide-react';
 
+// Memoized order card component to optimize renders
+const OrderCard = React.memo(({ 
+  order, 
+  onViewOrder, 
+  formatCurrency 
+}: { 
+  order: Order, 
+  onViewOrder: (order: Order) => void,
+  formatCurrency: (value: number) => string
+}) => {
+  const getDisplayOrderId = (order: Order) => {
+    if (order.orderNumber) {
+      return order.orderNumber;
+    } else {
+      return `#${(order._id || order.id || '').substring(0, 8)}`;
+    }
+  };
+  
+  return (
+    <div 
+      onClick={() => onViewOrder(order)}
+      className="cursor-pointer border rounded-md p-4 bg-card hover:bg-muted/50 transition-colors will-change-transform"
+    >
+      <div className="flex justify-between items-start">
+        <div>
+          <h3 className="font-medium text-sm">{order.customerName}</h3>
+          <p className="text-xs text-muted-foreground mt-1">
+            Order {getDisplayOrderId(order)}
+          </p>
+        </div>
+        <div className="flex flex-col items-end space-y-1">
+          <p className="font-medium text-sm">{formatCurrency(order.total)}</p>
+          <div className="flex space-x-1">
+            <OrderStatusBadge order={order} />
+            <PaymentStatusBadge order={order} />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+});
+
+OrderCard.displayName = 'OrderCard';
+
 export default function Orders() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -50,26 +94,50 @@ export default function Orders() {
   const [isCreateMode, setIsCreateMode] = useState(false);
   const [isUpdateMode, setIsUpdateMode] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [renderAnimations, setRenderAnimations] = useState(false);
   const isMobile = useIsMobile();
   const isSmallMobile = useIsSmallMobile();
   const { addNotification } = useNotifications();
+  const abortControllerRef = useRef<AbortController | null>(null);
 
+  // Effect for initial load
   useEffect(() => {
+    setRenderAnimations(false);
     loadOrders();
+    
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
   }, []);
 
+  // Effect for tab changes
   useEffect(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
     loadOrders();
   }, [activeTab]);
   
+  // Effect for date range changes
   useEffect(() => {
     if (dateRange.from && dateRange.to) {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
       loadOrders();
     }
   }, [dateRange.from, dateRange.to]);
-
+  
+  // Optimized data loading with abort controller
   const loadOrders = async () => {
     setIsLoading(true);
+    
+    // Create new abort controller for this request
+    abortControllerRef.current = new AbortController();
+    const signal = abortControllerRef.current.signal;
+    
     try {
       let fetchedOrders;
       
@@ -108,23 +176,37 @@ export default function Orders() {
         }
       }
       
-      setOrders(fetchedOrders);
+      // Check if request was aborted before updating state
+      if (!signal.aborted) {
+        setOrders(fetchedOrders);
+        
+        // Delay animations until content is loaded
+        setTimeout(() => {
+          if (!signal.aborted) {
+            setRenderAnimations(true);
+          }
+        }, 0);
+      }
     } catch (error) {
-      console.error("Error loading orders:", error);
-      toast.error("Failed to load orders");
+      if (!signal.aborted) {
+        console.error("Error loading orders:", error);
+        toast.error("Failed to load orders");
+      }
     } finally {
-      setIsLoading(false);
+      if (!signal.aborted) {
+        setIsLoading(false);
+      }
     }
   };
 
-  const formatCurrency = (value: number) => {
+  const formatCurrency = useCallback((value: number) => {
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
       currency: 'INR',
     }).format(value);
-  };
+  }, []);
 
-  const isWithinDateRange = (date: Date, from?: Date, to?: Date): boolean => {
+  const isWithinDateRange = useCallback((date: Date, from?: Date, to?: Date): boolean => {
     if (!from) return true;
     
     const orderDate = startOfDay(new Date(date));
@@ -135,9 +217,9 @@ export default function Orders() {
       (isAfter(orderDate, fromDate) || isEqual(orderDate, fromDate)) &&
       (isBefore(orderDate, toDate) || isEqual(orderDate, toDate))
     );
-  };
+  }, []);
 
-  const handleStatusChange = async (orderId: string, status: OrderStatus) => {
+  const handleStatusChange = useCallback(async (orderId: string, status: OrderStatus) => {
     setIsUpdateLoading(true);
     
     try {
@@ -159,9 +241,9 @@ export default function Orders() {
     } finally {
       setIsUpdateLoading(false);
     }
-  };
+  }, [orders]);
 
-  const handleMarkPaid = async (orderId: string) => {
+  const handleMarkPaid = useCallback(async (orderId: string) => {
     setIsUpdateLoading(true);
     
     try {
@@ -185,9 +267,9 @@ export default function Orders() {
     } finally {
       setIsUpdateLoading(false);
     }
-  };
+  }, [orders, addNotification]);
 
-  const handleDeleteOrder = async (orderId: string) => {
+  const handleDeleteOrder = useCallback(async (orderId: string) => {
     try {
       await deleteOrder(orderId);
       
@@ -208,110 +290,34 @@ export default function Orders() {
       console.error(error);
       toast.error('Failed to delete order');
     }
-  };
+  }, [orders, addNotification]);
 
-  const handleUpdateOrder = (order: Order) => {
+  const handleUpdateOrder = useCallback((order: Order) => {
     setSelectedOrder(order);
     setIsUpdateMode(true);
-  };
+  }, []);
+  
+  const handleViewOrder = useCallback((order: Order) => {
+    setSelectedOrder(order);
+    setIsViewDialogOpen(true);
+  }, []);
 
-  const filteredOrders = orders.filter(order => {
-    const matchesSearch = searchTerm === '' 
-      ? true 
-      : order.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (order._id && order._id.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (order.orderNumber && order.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()));
-    
-    const matchesDateRange = dateRange.from 
-      ? isWithinDateRange(new Date(order.createdAt), dateRange.from, dateRange.to)
-      : true;
+  // Memoize filtered orders to prevent recalculation on each render
+  const filteredOrders = useMemo(() => {
+    return orders.filter(order => {
+      const matchesSearch = searchTerm === '' 
+        ? true 
+        : order.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (order._id && order._id.toLowerCase().includes(searchTerm.toLowerCase())) ||
+          (order.orderNumber && order.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()));
       
-    return matchesSearch && matchesDateRange;
-  });
-
-  const OrderCard = React.memo(({ 
-    order, 
-    onViewOrder, 
-    formatCurrency 
-  }: { 
-    order: Order, 
-    onViewOrder: (order: Order) => void,
-    formatCurrency: (value: number) => string
-  }) => {
-    const getDisplayOrderId = (order: Order) => {
-      if (order.orderNumber) {
-        return order.orderNumber;
-      } else {
-        return `#${(order._id || order.id || '').substring(0, 8)}`;
-      }
-    };
-    
-    return (
-      <div 
-        className="flex flex-col p-4 border rounded-lg mb-3 bg-card shadow-sm"
-      >
-        <div className="flex justify-between items-start mb-2">
-          <h3 
-            className="font-semibold text-sm cursor-pointer hover:text-primary"
-            onClick={() => onViewOrder(order)}
-          >
-            {getDisplayOrderId(order)}
-          </h3>
-          <div className="flex items-center gap-2">
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="h-8 w-8 p-0"
-              onClick={() => generateOrderPDF(order)}
-              title="Print to PDF"
-            >
-              <Printer className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
+      const matchesDateRange = dateRange.from 
+        ? isWithinDateRange(new Date(order.createdAt), dateRange.from, dateRange.to)
+        : true;
         
-        <div
-          className="cursor-pointer"
-          onClick={() => onViewOrder(order)}
-        >
-          <p className="font-medium text-base mb-1">{order.customerName}</p>
-          <p className="text-xs text-muted-foreground mb-2">
-            {format(new Date(order.createdAt), 'MMM dd, yyyy')}
-          </p>
-        </div>
-
-        <div className="flex items-center justify-between mt-1">
-          <div className="flex items-center gap-2">
-            <OrderStatusBadge order={order} />
-            <PaymentStatusBadge order={order} />
-            {order.priority === 'urgent' && (
-              <Badge
-                className="bg-red-100 text-red-800 hover:bg-red-100 text-xs py-0 h-5"
-              >
-                Urgent
-              </Badge>
-            )}
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between mt-2">
-          <p className="font-bold">
-            {formatCurrency(order.total)}
-          </p>
-          <Button 
-            variant="outline" 
-            size="sm"
-            className="h-8 text-xs"
-            onClick={() => onViewOrder(order)}
-          >
-            View Details
-          </Button>
-        </div>
-      </div>
-    );
-  });
-
-  OrderCard.displayName = 'OrderCard';
+      return matchesSearch && matchesDateRange;
+    });
+  }, [orders, searchTerm, dateRange, isWithinDateRange]);
 
   if (isCreateMode) {
     return (

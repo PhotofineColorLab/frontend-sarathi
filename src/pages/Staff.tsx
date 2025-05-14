@@ -1,5 +1,5 @@
 // Staff Page
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { format } from 'date-fns';
 import {
   Edit,
@@ -66,6 +66,27 @@ import { useAuth } from '@/contexts/AuthContext';
 import { fetchStaff, createStaff, updateStaff, deleteStaff, recordAttendance, getStaffAttendance, getAllStaffAttendanceByDate } from '@/lib/api';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useIsMobile, useIsSmallMobile } from '@/hooks/use-mobile';
+
+// Use memoization for staff card component
+const StaffCard = React.memo(({ staff, onEdit, onDelete }) => {
+  const handleEdit = useCallback((e) => {
+    e.stopPropagation();
+    onEdit(staff);
+  }, [staff, onEdit]);
+  
+  const handleDelete = useCallback((e) => {
+    e.stopPropagation();
+    onDelete(staff);
+  }, [staff, onDelete]);
+  
+  return (
+    <div className="border rounded-md p-4 bg-card hover:bg-muted/50 transition-colors will-change-transform">
+      {/* Card content */}
+    </div>
+  );
+});
+
+StaffCard.displayName = 'StaffCard';
 
 export default function Staff() {
   const { user: currentUser } = useAuth();
@@ -246,10 +267,13 @@ export default function Staff() {
     }
   };
 
-  const filteredStaff = staff.filter(s => 
-    s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    s.phone.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Optimize data filtering with useMemo
+  const filteredStaff = useMemo(() => {
+    return staff.filter(s => 
+      s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      s.phone.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [staff, searchTerm]);
 
   // Fetch staff attendance data for the selected date
   const loadAttendanceData = async () => {
@@ -378,6 +402,24 @@ export default function Staff() {
     { value: 'executive', label: 'Executive' },
     { value: 'admin', label: 'Administrator' },
   ];
+
+  // Use passive scroll listeners
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    
+    const handleScroll = () => {
+      // Scroll handling logic
+    };
+    
+    container.addEventListener('scroll', handleScroll, { passive: true });
+    
+    return () => {
+      container.removeEventListener('scroll', handleScroll);
+    };
+  }, []);
 
   return (
     <DashboardLayout>

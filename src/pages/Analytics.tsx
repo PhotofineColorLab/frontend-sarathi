@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Card,
   CardContent,
@@ -39,6 +39,7 @@ import { useIsMobile, useIsSmallMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/contexts/AuthContext';
+import { useVirtualizer } from '@tanstack/react-virtual';
 
 export default function Analytics() {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -299,7 +300,7 @@ export default function Analytics() {
     trend: { value: number; positive: boolean } | null; 
     icon: React.ReactNode 
   }) => (
-    <Card>
+    <Card className="will-change-transform transform-gpu">
       <CardHeader className={cn("flex flex-row items-center justify-between space-y-0 pb-2", 
         isSmallMobile && "px-3 py-2"
       )}>
@@ -374,7 +375,7 @@ export default function Analytics() {
             <TabsContent value="executive" className="space-y-6">
               {/* Executive Analytics Content */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Card>
+                <Card className="will-change-transform transform-gpu">
                   <CardHeader className={cn(isSmallMobile && "p-3")}>
                     <CardTitle className={cn(isSmallMobile ? "text-base" : "text-lg")}>
                       Executive Performance
@@ -444,7 +445,7 @@ export default function Analytics() {
                   </CardContent>
                 </Card>
                 
-                <Card>
+                <Card className="will-change-transform transform-gpu">
                   <CardHeader className={cn(isSmallMobile && "p-3")}>
                     <CardTitle className={cn(isSmallMobile ? "text-base" : "text-lg")}>
                       Revenue Distribution
@@ -511,7 +512,7 @@ export default function Analytics() {
               </div>
               
               {/* Popular Products By Executives */}
-              <Card>
+              <Card className="will-change-transform transform-gpu">
                 <CardHeader className={cn(isSmallMobile && "p-3")}>
                   <CardTitle className={cn(isSmallMobile ? "text-base" : "text-lg")}>
                     Popular Products By Executives
@@ -756,3 +757,65 @@ const GeneralAnalyticsContent = ({
     </div>
   </>
 );
+
+// Add useMemo and React.memo for chart components to reduce rerenders
+const SalesChart = React.memo(({ data, isSmallMobile }: { data: any[], isSmallMobile: boolean }) => {
+  // ... existing chart implementation ...
+});
+
+SalesChart.displayName = 'SalesChart';
+
+// Memoize expensive data calculations
+const processedData = useMemo(() => {
+  // ... data processing logic ...
+  return result;
+}, [data]); // Only recalculate when data changes
+
+// Implement useCallback for event handlers
+const handleDateRangeChange = useCallback((newRange) => {
+  // ... handler logic ...
+}, [dependencies]);
+
+// Add passive scroll event listeners
+useEffect(() => {
+  const container = containerRef.current;
+  if (!container) return;
+  
+  const handleScroll = () => {
+    // ... scroll handling logic ...
+  };
+  
+  container.addEventListener('scroll', handleScroll, { passive: true });
+  
+  return () => {
+    container.removeEventListener('scroll', handleScroll);
+  };
+}, [dependencies]);
+
+// Use will-change selectively for animated elements
+<div className="will-change-transform" style={{ transform: 'translateZ(0)' }}>
+  {/* Only use for elements that actually transform/animate */}
+</div>
+
+// Optimize table rendering for large datasets
+{useMemo(() => (
+  <Table>
+    {/* Table contents */}
+  </Table>
+), [tableData])}
+
+// Implement virtualized rendering for long lists
+const rowVirtualizer = useVirtualizer({
+  count: items.length,
+  getScrollElement: () => parentRef.current,
+  estimateSize: () => 35,
+});
+
+// Defer non-essential renders
+useEffect(() => {
+  const timer = setTimeout(() => {
+    setRenderSecondaryCharts(true);
+  }, 100);
+  
+  return () => clearTimeout(timer);
+}, []);

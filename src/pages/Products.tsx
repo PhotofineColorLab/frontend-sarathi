@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef, memo } from 'react';
 import {
   Edit,
   Loader2,
@@ -49,6 +49,125 @@ import { DeleteProductDialog } from '@/components/products/DeleteProductDialog';
 
 const ITEMS_PER_PAGE = 10;
 
+// Memoized product card component for mobile view
+const ProductCard = memo(({ 
+  product, 
+  onViewProduct, 
+  onEditProduct, 
+  onDeleteProduct,
+  isSmallMobile
+}: { 
+  product: Product;
+  onViewProduct: (product: Product) => void;
+  onEditProduct: (product: Product, e?: React.MouseEvent) => void;
+  onDeleteProduct: (product: Product, e?: React.MouseEvent) => void;
+  isSmallMobile: boolean;
+}) => {
+  const handleEdit = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onEditProduct(product, e);
+  };
+  
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onDeleteProduct(product, e);
+  };
+  
+  return (
+    <div 
+      className="border rounded-md p-4 cursor-pointer bg-card hover:bg-muted/50 transition-colors will-change-transform"
+      onClick={() => onViewProduct(product)}
+    >
+      <div className="flex justify-between items-start">
+        <div>
+          <h3 className={cn("font-medium", isSmallMobile ? "text-sm" : "text-base")}>{product.name}</h3>
+          <div className="flex items-center gap-2 mt-1">
+            <Badge 
+              variant={product.stock === 0 ? "destructive" : (typeof product.threshold === 'number' && product.stock < product.threshold ? "destructive" : "outline")}
+              className={cn(isSmallMobile && "text-xs")}
+            >
+              {product.stock} {product.dimension || 'items'}
+            </Badge>
+            {typeof product.threshold === 'number' && (
+              <p className="text-xs text-muted-foreground">
+                Threshold: {product.threshold}
+              </p>
+            )}
+          </div>
+        </div>
+        <div className="flex gap-1">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="h-8 w-8 p-0" 
+            onClick={handleEdit}
+          >
+            <Edit className="h-4 w-4" />
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="h-8 w-8 p-0 text-destructive" 
+            onClick={handleDelete}
+          >
+            <Trash className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+});
+
+ProductCard.displayName = 'ProductCard';
+
+// Memoized table row component for desktop view
+const ProductRow = memo(({ 
+  product, 
+  onEditProduct, 
+  onDeleteProduct 
+}: { 
+  product: Product;
+  onEditProduct: (product: Product, e?: React.MouseEvent) => void;
+  onDeleteProduct: (product: Product, e?: React.MouseEvent) => void;
+}) => {
+  return (
+    <TableRow className="will-change-transform">
+      <TableCell className="font-medium">{product.name}</TableCell>
+      <TableCell>
+        <Badge 
+          variant={product.stock === 0 ? "destructive" : (typeof product.threshold === 'number' && product.stock < product.threshold ? "destructive" : "outline")}
+        >
+          {product.stock} {product.dimension || 'items'}
+        </Badge>
+      </TableCell>
+      <TableCell>{product.dimension || 'N/A'}</TableCell>
+      <TableCell>{typeof product.threshold === 'number' ? product.threshold : 'Not set'}</TableCell>
+      <TableCell className="text-right">
+        <div className="flex justify-end space-x-2">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="h-8 w-8 p-0" 
+            onClick={(e) => onEditProduct(product, e)}
+          >
+            <Edit className="h-4 w-4" />
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="h-8 w-8 p-0 text-destructive" 
+            onClick={(e) => onDeleteProduct(product, e)}
+          >
+            <Trash className="h-4 w-4" />
+          </Button>
+        </div>
+      </TableCell>
+    </TableRow>
+  );
+});
+
+ProductRow.displayName = 'ProductRow';
+
 export default function Products() {
   const { isAuthenticated, user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
@@ -61,6 +180,7 @@ export default function Products() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [renderAnimations, setRenderAnimations] = useState(false);
   
   // Form states
   const [productName, setProductName] = useState('');
@@ -70,20 +190,26 @@ export default function Products() {
 
   const isMobile = useIsMobile();
   const isSmallMobile = useIsSmallMobile();
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const navigate = useNavigate();
-
   const { addNotification } = useNotifications();
 
   // Fetch products when component mounts
   useEffect(() => {
     const loadProducts = async () => {
       setIsLoading(true);
+      setRenderAnimations(false);
+      
+      // Create new abort controller for this request
+      abortControllerRef.current = new AbortController();
+      const signal = abortControllerRef.current.signal;
+      
       try {
         const data = await fetchProducts();
         
-        // Add debugging for raw data
-        console.log('Raw products data from API:', JSON.stringify(data.slice(0, 3), null, 2));
+        // Check if request was aborted before updating state
+        if (signal.aborted) return;
         
         // Ensure all products have consistent ID properties
         const processedProducts = data.map((product: any) => {
@@ -96,26 +222,40 @@ export default function Products() {
           return processedProduct;
         });
         
-        // Add debugging for processed data
-        console.log('Processed products data:', JSON.stringify(processedProducts.slice(0, 3), null, 2));
-        
         setProducts(processedProducts);
         setCurrentPage(1); // Reset to first page
+        
+        // Delay animations until content is loaded
+        setTimeout(() => {
+          if (!signal.aborted) {
+            setRenderAnimations(true);
+          }
+        }, 0);
       } catch (error) {
-        console.error('Error loading products:', error);
-        toast.error('Failed to load products');
+        if (!signal.aborted) {
+          console.error('Error loading products:', error);
+          toast.error('Failed to load products');
+        }
       } finally {
-        setIsLoading(false);
+        if (!signal.aborted) {
+          setIsLoading(false);
+        }
       }
     };
     
     if (isAuthenticated) {
-    loadProducts();
+      loadProducts();
     } else {
       toast.error('Authentication required');
       navigate('/login');
     }
-  }, [isAuthenticated, user]);
+    
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, [isAuthenticated, user, navigate]);
 
   // Populate form fields when editing a product
   useEffect(() => {
@@ -130,41 +270,34 @@ export default function Products() {
     }
   }, [selectedProduct, isEditing]);
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-    }).format(value);
-  };
-
-  const resetForm = () => {
+  const resetForm = useCallback(() => {
     setProductName('');
     setProductStock('');
     setProductDimension('Pc');
     setProductThreshold('');
     setIsEditing(false);
     setSelectedProduct(null);
-  };
+  }, []);
 
-  const handleViewProduct = (product: Product) => {
+  const handleViewProduct = useCallback((product: Product) => {
     handleEditProduct(product);
-  };
+  }, []);
 
   // Function to safely get product ID (supports both MongoDB _id and client-side id)
-  const getProductId = (product: Product): string => {
+  const getProductId = useCallback((product: Product): string => {
     if (!product) return '';
     return String(product._id || product.id || '');
-  };
+  }, []);
 
   // Enhanced handle edit product function
-  const handleEditProduct = (product: Product) => {
+  const handleEditProduct = useCallback((product: Product) => {
     setSelectedProduct({...product});
     setIsProductFormOpen(true);
     setIsEditing(true);
-  };
+  }, []);
 
   // Handle opening the delete dialog with product data
-  const handleOpenDeleteDialog = (product: Product, e?: React.MouseEvent) => {
+  const handleOpenDeleteDialog = useCallback((product: Product, e?: React.MouseEvent) => {
     if (e) {
       e.stopPropagation();
     }
@@ -172,15 +305,13 @@ export default function Products() {
     // Immediately make a deep copy of the product
     const productData = JSON.parse(JSON.stringify(product));
     
-    console.log("Original product in handleOpenDeleteDialog:", productData);
-    
     // Set product to delete and open dialog in single update
     setProductToDelete(productData);
     setIsDeleteDialogOpen(true);
-  };
+  }, []);
 
   // Handle product deletion with better error handling
-  const handleDeleteProduct = async (productId: string): Promise<void> => {
+  const handleDeleteProduct = useCallback(async (productId: string): Promise<void> => {
     if (!productId) {
       console.error("Empty product ID provided to handleDeleteProduct");
       toast.error("Cannot delete: Missing product ID");
@@ -198,8 +329,6 @@ export default function Products() {
         toast.error("Product not found in current list");
         return;
       }
-      
-      console.log(`Deleting product: ${productToDelete.name} (ID: ${productId})`);
       
       // Call API to delete product
       await deleteProductAPI(productId);
@@ -231,17 +360,15 @@ export default function Products() {
       toast.error(error.message || 'Failed to delete product');
       // Do not close dialog or clear product on error
     }
-  };
+  }, [products, addNotification]);
 
-  const handleSubmitProduct = async (e: React.FormEvent) => {
+  const handleSubmitProduct = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
 
     try {
       // Parse the threshold value as number or undefined if empty
       const thresholdValue = productThreshold ? parseInt(productThreshold) : undefined;
-      
-      console.log('Submitting product with threshold:', thresholdValue);
       
       const formData = {
         name: productName,
@@ -250,337 +377,313 @@ export default function Products() {
         threshold: thresholdValue
       };
 
-      console.log('Product form data:', formData);
-      
-      let updatedProduct;
+      let savedProduct;
       
       if (isEditing && selectedProduct) {
+        // Update existing product
         const productId = getProductId(selectedProduct);
-        updatedProduct = await updateProductAPI(productId, formData);
+        savedProduct = await updateProductAPI(productId, formData);
         
-        setProducts(
-          products.map(p => (getProductId(p) === productId ? updatedProduct : p))
+        // Update the product in state
+        setProducts(prev => 
+          prev.map(p => {
+            if ((p._id && p._id === productId) || (p.id && p.id === productId)) {
+              // Ensure _id is preserved
+              return { 
+                ...savedProduct,
+                _id: p._id || savedProduct._id,
+                id: p.id || savedProduct.id
+              };
+            }
+            return p;
+          })
         );
         
-        toast.success('Product updated successfully');
+        toast.success(`${productName} updated successfully`);
         
+        // Add notification
         addNotification({
           type: 'product',
           title: 'Product Updated',
-          message: `${updatedProduct.name} has been successfully updated`,
+          message: `${productName} has been successfully updated in your inventory`,
           actionUrl: '/products'
         });
       } else {
-        const newProduct = await createProduct(formData);
-        setProducts([newProduct, ...products]);
+        // Create new product
+        savedProduct = await createProduct(formData);
         
-        toast.success('Product added successfully');
+        // Ensure consistent ID fields
+        if (savedProduct._id && !savedProduct.id) {
+          savedProduct.id = savedProduct._id;
+        }
         
+        setProducts(prev => [savedProduct, ...prev]);
+        toast.success(`${productName} added successfully`);
+        
+        // Add notification
         addNotification({
           type: 'product',
-          title: 'New Product Added',
-          message: `${newProduct.name} has been successfully added to your inventory`,
+          title: 'Product Added',
+          message: `${productName} has been successfully added to your inventory`,
           actionUrl: '/products'
         });
       }
 
-      setIsProductFormOpen(false);
+      // Reset form and close dialog
       resetForm();
+      setIsProductFormOpen(false);
     } catch (error: any) {
       console.error('Error saving product:', error);
       toast.error(error.message || 'Failed to save product');
     } finally {
       setIsSubmitting(false);
     }
-  };
+  }, [productName, productStock, productDimension, productThreshold, isEditing, selectedProduct, getProductId, resetForm, addNotification]);
 
-  const filteredProducts = products.filter(product => {
-    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesSearch;
-  });
+  // Filter products based on search term
+  const filteredProducts = useMemo(() => {
+    return searchTerm
+      ? products.filter(product => 
+          product.name.toLowerCase().includes(searchTerm.toLowerCase())
+        )
+      : products;
+  }, [products, searchTerm]);
 
-  // Add debug logging for the first product in filtered list
-  React.useEffect(() => {
-    if (filteredProducts.length > 0) {
-      console.log("Sample product in filteredProducts:", filteredProducts[0]);
-    }
-  }, [filteredProducts]);
+  // Calculate pagination
+  const totalPages = useMemo(() => 
+    Math.ceil(filteredProducts.length / ITEMS_PER_PAGE), 
+    [filteredProducts]
+  );
+  
+  // Get current page items
+  const currentProducts = useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredProducts.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  }, [filteredProducts, currentPage]);
 
-  // Pagination logic
-  const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE);
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const paginatedProducts = filteredProducts.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  // Handle page change
+  const handlePageChange = useCallback((page: number) => {
+    setCurrentPage(page);
+    // Scroll to top smoothly when changing pages
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
 
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex justify-between items-center">
           <div className="flex flex-col space-y-2">
             <h1 className={cn("font-bold tracking-tight", 
-                            isMobile ? "text-2xl" : "text-3xl")}>Products</h1>
+                           isMobile ? "text-2xl" : "text-3xl")}>Products</h1>
             <p className={cn("text-muted-foreground",
                           isSmallMobile ? "text-xs" : "text-sm")}>
-              Manage your inventory and product information
+              Manage your inventory of products here.
             </p>
           </div>
           <Button
-            variant="outline"
-            className="gap-1"
-            onClick={() => navigate('/')}
+            onClick={() => {
+              resetForm();
+              setIsProductFormOpen(true);
+            }}
+            className="hidden sm:flex"
           >
-            <ChevronLeft className="h-4 w-4" />
-            {!isSmallMobile && "Back to Dashboard"}
-            {isSmallMobile && "Dashboard"}
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Add Product
           </Button>
         </div>
 
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
-            <div className="relative flex-1 md:max-w-[300px]">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                type="search"
-                placeholder="Search products..."
-                className="pl-8"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-          </div>
-          
-          <div className="flex flex-row gap-2 justify-between sm:justify-end">
-            <Button onClick={() => setIsProductFormOpen(true)} size={isMobile ? "sm" : "default"}>
-              <PlusCircle className="h-4 w-4 mr-2" />
-              {!isSmallMobile ? 'Add Product' : 'Add'}
-            </Button>
-          </div>
-        </div>
-
-        {isLoading ? (
-          <div className="flex justify-center items-center h-48">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-          </div>
-        ) : filteredProducts.length === 0 ? (
-          <EmptyState
-            icon={<Package className="h-10 w-10 text-muted-foreground" />}
-            title="No products found"
-            description={searchTerm 
-              ? "Try adjusting your search term" 
-              : "Get started by creating your first product"
-            }
-            action={
-              <Button onClick={() => setIsProductFormOpen(true)}>
-                <PlusCircle className="h-4 w-4 mr-2" />
+        <Card className="will-change-transform">
+          <CardHeader className="px-5 pt-5 pb-0">
+            <div className="flex flex-col sm:flex-row justify-between gap-4 items-start sm:items-center">
+              <div className="relative w-full sm:max-w-xs">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="search"
+                  placeholder="Search products..."
+                  className="pl-8 w-full sm:w-[300px]"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+              <Button
+                onClick={() => {
+                  resetForm();
+                  setIsProductFormOpen(true);
+                }}
+                className="w-full sm:hidden"
+              >
+                <PlusCircle className="mr-2 h-4 w-4" />
                 Add Product
               </Button>
-            }
-          />
-        ) : (
-          <div className="border rounded-md">
-            {isMobile ? (
-              // Responsive list view for mobile
-              <div className="divide-y">
-                {filteredProducts.map((product) => (
-                  <div 
-                    key={getProductId(product)}
-                    className="p-4 hover:bg-muted/50 transition-colors"
-                    onClick={() => handleEditProduct(product)}
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center flex-shrink-0">
-                            <Package className="h-5 w-5 text-muted-foreground" />
-                          </div>
-                        <div>
-                          <h3 className="font-medium text-sm">{product.name}</h3>
-                          <p className="text-xs text-muted-foreground">{product.dimension || 'Pc'}</p>
-                        </div>
-                      </div>
-                      <Badge variant={typeof product.threshold === 'number' && product.stock < product.threshold ? "destructive" : "default"}>
-                        {product.stock > 0 ? `${product.stock} in stock` : 'Out of stock'}
-                      </Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="p-5">
+            {isLoading ? (
+              <div className="flex items-center justify-center py-10">
+                <div className="transform-gpu">
+                  <div className="relative h-16 w-16">
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="h-12 w-12 rounded-full border-4 border-muted"></div>
                     </div>
-                    <div className="flex justify-between items-center">
-                      <div className="flex space-x-1">
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="h-8 w-8 p-0"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleEditProduct(product);
-                          }}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          className="h-8 w-8 p-0 text-destructive"
-                          onClick={(e) => handleOpenDeleteDialog(product, e)}
-                        >
-                          <Trash className="h-4 w-4" />
-                        </Button>
-                      </div>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="h-12 w-12 rounded-full border-t-4 border-primary animate-spin"></div>
                     </div>
                   </div>
-                ))}
+                </div>
+                <p className="ml-4 text-lg text-muted-foreground">Loading products...</p>
               </div>
+            ) : filteredProducts.length === 0 ? (
+              <EmptyState
+                icon={<Package className="h-10 w-10 text-muted-foreground" />}
+                title="No products found"
+                description={
+                  searchTerm
+                    ? "Try a different search term"
+                    : "Add your first product to get started"
+                }
+                action={
+                  !searchTerm && (
+                    <Button
+                      onClick={() => {
+                        resetForm();
+                        setIsProductFormOpen(true);
+                      }}
+                    >
+                      <PlusCircle className="mr-2 h-4 w-4" />
+                      Add Product
+                    </Button>
+                  )
+                }
+              />
             ) : (
-              // Desktop table view
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Stock</TableHead>
-                    <TableHead>Dimension</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredProducts.map((product) => (
-                    <TableRow key={getProductId(product)}>
-                      <TableCell className="font-medium">
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
-                              <Package className="h-5 w-5 text-muted-foreground" />
-                            </div>
-                          <div>
-                            <span 
-                              className="cursor-pointer hover:text-primary hover:underline"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleEditProduct(product);
-                              }}
-                            >
-                              {product.name}
-                            </span>
-                            <div className="text-xs text-muted-foreground">
-                              {product.dimension || 'Pc'}
-                            </div>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={typeof product.threshold === 'number' && product.stock < product.threshold ? "destructive" : "default"}>
-                          {product.stock > 0 ? `${product.stock} in stock` : 'Out of stock'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{product.dimension || 'Pc'}</Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end space-x-2">
-                          <Button 
-                            variant="ghost" 
-                            size="icon"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleEditProduct(product);
-                            }}
+              <div className={cn(
+                "transform-gpu",
+                renderAnimations ? "animate-fade-in" : ""
+              )}>
+                {isMobile ? (
+                  <div className="space-y-3 mt-4">
+                    {currentProducts.map((product) => (
+                      <ProductCard
+                        key={getProductId(product)}
+                        product={product}
+                        onViewProduct={handleViewProduct}
+                        onEditProduct={handleEditProduct}
+                        onDeleteProduct={handleOpenDeleteDialog}
+                        isSmallMobile={isSmallMobile}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Stock</TableHead>
+                        <TableHead>Dimension</TableHead>
+                        <TableHead>Threshold</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {currentProducts.map((product) => (
+                        <ProductRow
+                          key={getProductId(product)}
+                          product={product}
+                          onEditProduct={handleEditProduct}
+                          onDeleteProduct={handleOpenDeleteDialog}
+                        />
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+
+                {totalPages > 1 && (
+                  <div className="mt-4 flex justify-center">
+                    <div className="flex space-x-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handlePageChange(currentPage - 1)}
+                        disabled={currentPage === 1}
+                      >
+                        Previous
+                      </Button>
+                      {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                        (page) => (
+                          <Button
+                            key={page}
+                            variant={currentPage === page ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => handlePageChange(page)}
                           >
-                            <Edit className="h-4 w-4" />
+                            {page}
                           </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="icon"
-                            className="text-destructive"
-                            onClick={(e) => handleOpenDeleteDialog(product, e)}
-                          >
-                            <Trash className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                        )
+                      )}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handlePageChange(currentPage + 1)}
+                        disabled={currentPage === totalPages}
+                      >
+                        Next
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
-          </div>
-        )}
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Product form dialog */}
+      {/* Product Form Dialog */}
       <Dialog open={isProductFormOpen} onOpenChange={setIsProductFormOpen}>
-        <DialogContent className={cn(
-          "max-w-2xl",
-          isMobile && "w-[95vw] p-4 max-h-[90vh] overflow-y-auto"
-        )}>
+        <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle className={cn(
-              isMobile ? "text-lg" : "text-xl"
-            )}>{isEditing ? 'Edit Product' : 'Add New Product'}</DialogTitle>
-            <DialogDescription className={cn(
-              isMobile && "text-xs"
-            )}>
-              {isEditing 
-                ? "Update the product details below." 
-                : "Fill out the form below to add a new product to your inventory."}
+            <DialogTitle>
+              {isEditing ? 'Edit Product' : 'Add New Product'}
+            </DialogTitle>
+            <DialogDescription>
+              {isEditing
+                ? 'Update product details below'
+                : 'Fill in the product details below to add to your inventory'}
             </DialogDescription>
           </DialogHeader>
-          
-          <form onSubmit={handleSubmitProduct} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="name" className={cn(isMobile && "text-sm")}>Product Name</Label>
+          <form onSubmit={handleSubmitProduct}>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="name">Product Name</Label>
                 <Input
                   id="name"
                   value={productName}
                   onChange={(e) => setProductName(e.target.value)}
-                  placeholder="Enter product name"
+                  placeholder="e.g. Steel Bars"
                   required
-                  className={cn(isMobile && "h-9 text-sm")}
-              />
-            </div>
-            
-            <div className={cn(
-              "grid gap-4",
-              isMobile ? "grid-cols-1" : "grid-cols-1 md:grid-cols-2"
-            )}>
-              <div className="space-y-2">
-                <Label htmlFor="stock" className={cn(isMobile && "text-sm")}>Stock</Label>
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="stock">Stock Quantity</Label>
                 <Input
                   id="stock"
                   type="number"
-                  min="0"
-                  step="1"
                   value={productStock}
                   onChange={(e) => setProductStock(e.target.value)}
-                  placeholder="0"
+                  placeholder="e.g. 100"
+                  min="0"
                   required
-                  className={cn(isMobile && "h-9 text-sm")}
                 />
               </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="threshold" className={cn(isMobile && "text-sm")}>Low Stock Threshold</Label>
-                <Input
-                  id="threshold"
-                  type="number"
-                  min="1"
-                  step="1"
-                  value={productThreshold}
-                  onChange={(e) => setProductThreshold(e.target.value)}
-                  placeholder="Enter threshold value"
-                  className={cn(isMobile && "h-9 text-sm")}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Alert will be shown when stock is below this number
-                </p>
-              </div>
-            </div>
-            
-            <div className={cn(
-              "grid gap-4",
-              isMobile ? "grid-cols-1" : "grid-cols-1 md:grid-cols-2"
-            )}>
-            <div className="space-y-2">
-                <Label htmlFor="dimension" className={cn(isMobile && "text-sm")}>Dimension</Label>
+              <div className="grid gap-2">
+                <Label htmlFor="dimension">Dimension/Unit</Label>
                 <Select
                   value={productDimension}
-                  onValueChange={(value) => setProductDimension(value as ProductDimension)}
+                  onValueChange={(value) =>
+                    setProductDimension(value as ProductDimension)
+                  }
                 >
-                  <SelectTrigger className={cn(isMobile && "h-9 text-sm")}>
-                    <SelectValue placeholder="Select dimension" />
+                  <SelectTrigger id="dimension">
+                    <SelectValue placeholder="Select a unit" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Bag">Bag</SelectItem>
@@ -589,50 +692,59 @@ export default function Products() {
                     <SelectItem value="Carton">Carton</SelectItem>
                     <SelectItem value="Coils">Coils</SelectItem>
                     <SelectItem value="Dozen">Dozen</SelectItem>
-                    <SelectItem value="Ft">Ft</SelectItem>
+                    <SelectItem value="Ft">Feet (Ft)</SelectItem>
                     <SelectItem value="Gross">Gross</SelectItem>
-                    <SelectItem value="Kg">Kg</SelectItem>
-                    <SelectItem value="Mtr">Mtr</SelectItem>
-                    <SelectItem value="Pc">Pc</SelectItem>
-                    <SelectItem value="Pkt">Pkt</SelectItem>
+                    <SelectItem value="Kg">Kilogram (Kg)</SelectItem>
+                    <SelectItem value="Mtr">Meter (Mtr)</SelectItem>
+                    <SelectItem value="Pc">Piece (Pc)</SelectItem>
+                    <SelectItem value="Pkt">Packet (Pkt)</SelectItem>
                     <SelectItem value="Set">Set</SelectItem>
                     <SelectItem value="Not Applicable">Not Applicable</SelectItem>
                   </SelectContent>
                 </Select>
-                </div>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="threshold">
+                  Low Stock Threshold <span className="text-sm text-muted-foreground">(Optional)</span>
+                </Label>
+                <Input
+                  id="threshold"
+                  type="number"
+                  value={productThreshold}
+                  onChange={(e) => setProductThreshold(e.target.value)}
+                  placeholder="e.g. 10"
+                  min="0"
+                />
+              </div>
             </div>
-
-            <DialogFooter className={cn(
-              "gap-2 mt-6",
-              isMobile && "flex-col"
-            )}>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setIsProductFormOpen(false)}
-                className={cn(isMobile && "w-full h-9")}
-              >
+            <DialogFooter>
+              <Button variant="outline" type="button" onClick={() => setIsProductFormOpen(false)}>
                 Cancel
               </Button>
-              <Button 
-                type="submit" 
-                disabled={isSubmitting} 
-                className={cn(isMobile && "w-full h-9")}
-              >
-                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {isEditing ? 'Update Product' : 'Add Product'}
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    {isEditing ? 'Updating...' : 'Adding...'}
+                  </>
+                ) : (
+                  <>{isEditing ? 'Update Product' : 'Add Product'}</>
+                )}
               </Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
 
-      <DeleteProductDialog 
-        isOpen={isDeleteDialogOpen}
-        onOpenChange={setIsDeleteDialogOpen}
-        product={productToDelete}
-        onDelete={handleDeleteProduct}
-      />
+      {/* Delete Confirmation Dialog */}
+      {productToDelete && (
+        <DeleteProductDialog
+          open={isDeleteDialogOpen}
+          onOpenChange={setIsDeleteDialogOpen}
+          productName={productToDelete.name}
+          onConfirm={() => handleDeleteProduct(getProductId(productToDelete))}
+        />
+      )}
     </DashboardLayout>
   );
 }

@@ -53,7 +53,7 @@ export default function Login() {
         </div>
 
         <Card>
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit} className="space-y-4 will-change-transform">
             <CardHeader>
               <CardTitle>Sign In</CardTitle>
               <CardDescription>
@@ -94,7 +94,7 @@ export default function Login() {
               </div>
             </CardContent>
             <CardFooter>
-              <Button type="submit" className="w-full" disabled={isLoggingIn || loading}>
+              <Button type="submit" className="w-full transform-gpu" disabled={isLoggingIn || loading}>
                 {(isLoggingIn || loading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {isLoggingIn ? 'Signing in...' : 'Sign In'}
               </Button>
