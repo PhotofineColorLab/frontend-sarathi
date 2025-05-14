@@ -26,6 +26,7 @@ import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { useIsMobile, useIsTablet, useIsSmallMobile } from '@/hooks/use-mobile';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { NotificationBell } from '@/components/ui/notification-bell';
 
 interface NavItemProps {
   icon: React.ReactNode;
@@ -90,6 +91,7 @@ NavItem.displayName = 'NavItem';
 const UserInfo = React.memo(({ collapsed = false }: { collapsed?: boolean }) => {
   const { user, logout } = useAuth();
   const isSmallMobile = useIsSmallMobile();
+  const isMobile = useIsMobile();
   
   const handleLogout = useCallback(() => {
     logout();
@@ -113,23 +115,25 @@ const UserInfo = React.memo(({ collapsed = false }: { collapsed?: boolean }) => 
           </Tooltip>
         </TooltipProvider>
         
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="mt-2 text-muted-foreground hover:text-destructive" 
-                onClick={handleLogout}
-              >
-                <LogOut className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="right">
-              <p>Log out</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+        {!isMobile && (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="mt-2 text-muted-foreground hover:text-destructive" 
+                  onClick={handleLogout}
+                >
+                  <LogOut className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="right">
+                <p>Log out</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
       </div>
     );
   }
@@ -150,15 +154,18 @@ const UserInfo = React.memo(({ collapsed = false }: { collapsed?: boolean }) => 
           </div>
         </div>
       </div>
-      <Button 
-        variant="ghost" 
-        size="sm" 
-        className="justify-start pl-2 text-muted-foreground hover:text-destructive" 
-        onClick={handleLogout}
-      >
-        <LogOut className="mr-2 h-4 w-4" />
-        Log out
-      </Button>
+      
+      {!isMobile && (
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          className="justify-start pl-2 text-muted-foreground hover:text-destructive" 
+          onClick={handleLogout}
+        >
+          <LogOut className="mr-2 h-4 w-4" />
+          Log out
+        </Button>
+      )}
     </div>
   );
 });
@@ -171,7 +178,11 @@ const DashboardLayout = React.memo(({ children }: { children: React.ReactNode })
   const isTablet = useIsTablet();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const { isAdmin, isExecutive, user } = useAuth();
+  const { isAdmin, isExecutive, user, logout } = useAuth();
+
+  const handleLogout = useCallback(() => {
+    logout();
+  }, [logout]);
 
   // Update sidebar state based on screen size
   useEffect(() => {
@@ -293,14 +304,41 @@ const DashboardLayout = React.memo(({ children }: { children: React.ReactNode })
               {SidebarContent}
             </SheetContent>
           </Sheet>
-          <Button 
-            variant="outline" 
-            size="icon" 
-            className="fixed top-4 left-4 z-40 md:hidden"
-            onClick={() => setSidebarOpen(true)}
-          >
-            <Menu className="h-5 w-5" />
-          </Button>
+          <div className="fixed top-4 left-4 right-4 z-40 flex justify-between items-center md:hidden">
+            <Button 
+              variant="outline" 
+              size="icon"
+              onClick={() => setSidebarOpen(true)}
+              aria-label="Open menu"
+            >
+              <Menu className="h-5 w-5" />
+            </Button>
+            
+            {/* Mobile actions */}
+            <div className="flex items-center gap-2">
+              <NotificationBell />
+              
+              {/* Mobile logout button */}
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button 
+                      variant="outline" 
+                      size="icon"
+                      onClick={handleLogout}
+                      className="bg-background"
+                      aria-label="Log out"
+                    >
+                      <LogOut className="h-5 w-5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Log out</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+          </div>
         </>
       ) : (
         <div className={cn(
@@ -314,7 +352,7 @@ const DashboardLayout = React.memo(({ children }: { children: React.ReactNode })
       <main className="flex-1 overflow-auto pb-16 md:pb-0">
         <div className={cn(
           "container py-6 h-full",
-          isMobile && "pt-16 px-4" // Add padding for mobile menu
+          isMobile && "pt-20 px-4" // Increased padding-top for mobile menu
         )}>
           {children}
         </div>

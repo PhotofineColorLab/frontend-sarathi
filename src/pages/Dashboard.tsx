@@ -130,7 +130,7 @@ export default function Dashboard() {
               Welcome back, {user?.name}! Here's a summary of your shop.
             </p>
           </div>
-          <NotificationBell />
+          {!isMobile && <NotificationBell />}
         </div>
 
         {isAdmin && (
