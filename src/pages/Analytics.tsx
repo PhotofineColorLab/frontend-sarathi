@@ -381,7 +381,7 @@ export default function Analytics() {
                       Executive Performance
                     </CardTitle>
                     <CardDescription className={cn(isSmallMobile && "text-xs")}>
-                      Orders and revenue by executive
+                      Orders & revenue by executive
                     </CardDescription>
                   </CardHeader>
                   <CardContent className={cn(isSmallMobile && "p-3")}>
