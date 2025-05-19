@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import {
   Dialog,
@@ -25,13 +25,14 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Order, OrderStatus, Staff } from '@/lib/types';
-import { OrderStatusBadge } from './OrderStatusBadge';
-import { PaymentStatusBadge } from './PaymentStatusBadge';
+import { OrderStatusBadge } from '@/components/orders/OrderStatusBadge';
+import { PaymentStatusBadge } from '@/components/orders/PaymentStatusBadge';
 import { fetchStaff } from '@/lib/api';
 import { useIsMobile, useIsTablet } from '@/hooks/use-mobile';
-import { Trash2, Clipboard, Printer } from 'lucide-react';
+import { Trash, Clipboard, Printer, Pencil, Calendar, CircleDollarSign, FileText } from 'lucide-react';
 import { cn, generateOrderPDF } from '@/lib/utils';
 import { Card, CardContent } from '@/components/ui/card';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface OrderViewDialogProps {
   isOpen: boolean;
@@ -55,33 +56,23 @@ export function OrderViewDialog({
   formatCurrency
 }: OrderViewDialogProps) {
   const [staffMembers, setStaffMembers] = useState<any[]>([]);
+  const [deliveryStaff, setDeliveryStaff] = useState<any>(null);
+  const { user, isAdmin, isExecutive } = useAuth();
   const isMobile = useIsMobile();
   const isTablet = useIsTablet();
   const isMobileOrTablet = isMobile || isTablet;
   
-  useEffect(() => {
-    const loadStaffMembers = async () => {
-      try {
-        const staff = await fetchStaff();
-        setStaffMembers(staff);
-      } catch (error) {
-        console.error("Error loading staff members:", error);
-      }
-    };
-    
-    if (isOpen) {
-      loadStaffMembers();
-    }
-  }, [isOpen]);
-
-  if (!order) return null;
-
-  const getOrderId = (order: Order) => order._id || '';
-  const getDisplayOrderId = (order: Order) => {
+  const getOrderId = (order: Order | null) => {
+    if (!order) return '';
+    return order._id || order.id || '';
+  };
+  
+  const getDisplayOrderId = (order: Order | null) => {
+    if (!order) return '';
     if (order.orderNumber) {
       return order.orderNumber;
     } else {
-      return `#${(order._id || '').substring(0, 8)}`;
+      return `#${(order._id || order.id || '').substring(0, 8)}`;
     }
   };
 
@@ -109,15 +100,69 @@ export function OrderViewDialog({
     }
   };
   
-  // Get assigned staff name
+  // Fetch staff members data when dialog opens
+  useEffect(() => {
+    if (!isOpen || !order) return;
+    
+    const fetchStaffData = async () => {
+      try {
+        // Fetch all staff members
+        const allStaff = await fetchStaff();
+        setStaffMembers(allStaff);
+        
+        // If order has assignedTo, find that staff member in the fetched list
+        if (order.assignedTo) {
+          const assignedStaff = allStaff.find(staff => 
+            staff._id === order.assignedTo || staff.id === order.assignedTo
+          );
+          if (assignedStaff) {
+            // We keep all staff in staffMembers but highlight the assigned one in UI
+          }
+        }
+        
+        // If order has deliveryPerson, find that staff member in the fetched list
+        if (order.deliveryPerson) {
+          const foundDeliveryStaff = allStaff.find(staff => 
+            staff._id === order.deliveryPerson || staff.id === order.deliveryPerson
+          );
+          if (foundDeliveryStaff) {
+            setDeliveryStaff(foundDeliveryStaff);
+          }
+        } else {
+          setDeliveryStaff(null);
+        }
+      } catch (error) {
+        console.error("Error fetching staff data:", error);
+      }
+    };
+    
+    fetchStaffData();
+  }, [isOpen, order]);
+
+  // Get assigned staff member name
   const getAssignedStaffName = () => {
-    if (!order.assignedTo) return 'All Staff';
+    if (!order || !order.assignedTo || staffMembers.length === 0) {
+      return 'Not Assigned';
+    }
     
     const assignedStaff = staffMembers.find(staff => 
-      (staff._id && staff._id === order.assignedTo) || (staff.id && staff.id === order.assignedTo)
+      staff._id === order.assignedTo || staff.id === order.assignedTo
     );
+    
     return assignedStaff ? assignedStaff.name : 'Unknown Staff';
   };
+  
+  // Get delivery person name
+  const getDeliveryPersonName = () => {
+    if (!order || !order.deliveryPerson) {
+      return 'Not Assigned';
+    }
+    
+    return deliveryStaff ? deliveryStaff.name : 'Unknown Staff';
+  };
+  
+  // Early return after all hooks are defined
+  if (!order) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -176,7 +221,7 @@ export function OrderViewDialog({
                       onDeleteOrder(order);
                     }}
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash className="h-4 w-4" />
                     Delete Order
                   </Button>
                 )}
@@ -243,12 +288,22 @@ export function OrderViewDialog({
                 {getPriorityText(order.priority)}
               </p>
             </div>
-            <div>
+            <div className={cn(isMobile && "col-span-2")}>
               <p className={cn("font-medium", isMobile ? "text-xs" : "text-sm")}>Assigned To</p>
               <p className={cn("text-muted-foreground", isMobile ? "text-xs" : "text-sm")}>
                 {getAssignedStaffName()}
               </p>
             </div>
+            
+            {order.status === 'dispatched' && (
+              <div className={cn(isMobile && "col-span-2")}>
+                <p className={cn("font-medium", isMobile ? "text-xs" : "text-sm")}>Delivery Person</p>
+                <p className={cn("text-muted-foreground", isMobile ? "text-xs" : "text-sm")}>
+                  {getDeliveryPersonName()}
+                </p>
+              </div>
+            )}
+            
             {order.paidAt && (
               <div>
                 <p className={cn("font-medium", isMobile ? "text-xs" : "text-sm")}>Payment Date</p>

@@ -635,14 +635,16 @@ export const getStaffAttendance = async (staffId: string, startDate?: string, en
 
 export const getAllStaffAttendanceByDate = async (date: string) => {
   const token = localStorage.getItem('token');
-  const response = await fetch(`${API_URL}/staff/attendance/date?date=${date}`, {
+  const url = `${API_URL}/staff/attendance/date?date=${date}`;
+  
+  const response = await fetch(url, {
     headers: {
       'Authorization': `Bearer ${token}`,
     },
   });
 
   if (!response.ok) {
-    throw new Error('Failed to fetch attendance for the specified date');
+    throw new Error('Failed to fetch staff attendance by date');
   }
 
   return response.json();
@@ -762,4 +764,25 @@ export const fetchOrdersByExecutives = async () => {
     executives,
     orders: executiveOrders
   };
+};
+
+export const assignDeliveryPerson = async (orderId: string, deliveryPersonId: string) => {
+  const token = localStorage.getItem('token');
+  
+  const response = await fetch(`${API_URL}/orders/${orderId}/delivery-person`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify({ deliveryPersonId }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    console.error('Failed to assign delivery person:', error);
+    throw new Error(error.message || 'Failed to assign delivery person');
+  }
+
+  return response.json();
 }; 

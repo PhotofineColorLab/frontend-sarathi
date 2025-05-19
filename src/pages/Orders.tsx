@@ -9,6 +9,7 @@ import { EmptyOrdersState } from '@/components/orders/EmptyOrdersState';
 import { OrderViewDialog } from '@/components/orders/OrderViewDialog';
 import { DeleteOrderDialog } from '@/components/orders/DeleteOrderDialog';
 import { MarkPaidDialog } from '@/components/orders/MarkPaidDialog';
+import { DeliveryAssignDialog } from '@/components/orders/DeliveryAssignDialog';
 import { Order, OrderStatus } from '@/lib/types';
 import OrderForm from '@/components/forms/OrderForm';
 import { PaginationWrapper } from '@/components/ui/pagination-wrapper';
@@ -19,7 +20,8 @@ import {
   fetchOrdersByAssignedTo, 
   fetchOrdersByCreator, 
   deleteOrder, 
-  updateOrder, 
+  updateOrder,
+  assignDeliveryPerson, 
   markOrderAsPaid 
 } from '@/lib/api';
 import { isAfter, isBefore, isEqual, startOfDay, format } from 'date-fns';
@@ -91,6 +93,7 @@ export default function Orders() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isMarkPaidDialogOpen, setIsMarkPaidDialogOpen] = useState(false);
+  const [isDeliveryAssignDialogOpen, setIsDeliveryAssignDialogOpen] = useState(false);
   const [isCreateMode, setIsCreateMode] = useState(false);
   const [isUpdateMode, setIsUpdateMode] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -235,6 +238,15 @@ export default function Orders() {
       );
       
       toast.success(`Order status updated to ${status}`);
+      
+      // If status is dispatched, show the delivery assignment dialog
+      if (status === 'dispatched') {
+        const orderToUpdate = orders.find(order => order._id === orderId || order.id === orderId);
+        if (orderToUpdate) {
+          setSelectedOrder(updatedOrder);
+          setIsDeliveryAssignDialogOpen(true);
+        }
+      }
     } catch (error) {
       console.error(error);
       toast.error('Failed to update order status');
@@ -301,6 +313,36 @@ export default function Orders() {
     setSelectedOrder(order);
     setIsViewDialogOpen(true);
   }, []);
+
+  const handleAssignDelivery = useCallback(async (orderId: string, staffId: string) => {
+    try {
+      // Use the dedicated API endpoint for assigning delivery staff
+      const updatedOrder = await assignDeliveryPerson(orderId, staffId);
+      
+      // Update the orders state with the updated order
+      setOrders(
+        orders.map(order => (order._id === orderId || order.id === orderId ? updatedOrder : order))
+      );
+      
+      // Update selectedOrder so the OrderViewDialog shows the updated delivery person
+      setSelectedOrder(updatedOrder);
+      
+      toast.success('Delivery person assigned successfully');
+      
+      addNotification({
+        type: 'order',
+        title: 'Delivery Person Assigned',
+        message: `Delivery person assigned for Order #${updatedOrder.orderNumber || orderId.substring(0, 8)}`,
+        actionUrl: '/orders'
+      });
+      
+      return Promise.resolve();
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to assign delivery person');
+      return Promise.reject(error);
+    }
+  }, [orders, addNotification]);
 
   // Memoize filtered orders to prevent recalculation on each render
   const filteredOrders = useMemo(() => {
@@ -471,6 +513,13 @@ export default function Orders() {
         order={selectedOrder}
         onMarkPaid={handleMarkPaid}
         formatCurrency={formatCurrency}
+      />
+
+      <DeliveryAssignDialog
+        isOpen={isDeliveryAssignDialogOpen}
+        onOpenChange={setIsDeliveryAssignDialogOpen}
+        order={selectedOrder}
+        onAssignDelivery={handleAssignDelivery}
       />
     </DashboardLayout>
   );

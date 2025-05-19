@@ -83,6 +83,7 @@ export interface Order {
   createdBy?: string; // ID of the staff member who created the order
   isPaid?: boolean;
   paidAt?: string | Date;
+  deliveryPerson?: string; // Added for tracking who delivers the order
 }
 
 // Analytics Types
