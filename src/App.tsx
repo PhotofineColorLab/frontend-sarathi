@@ -15,6 +15,7 @@ import Analytics from "@/pages/Analytics";
 import Login from "@/pages/Login";
 import NotFound from "@/pages/NotFound";
 import { NotificationProvider } from '@/contexts/NotificationContext';
+import { ScrollManager } from '@/components/layout/ScrollManager';
 
 const queryClient = new QueryClient();
 
@@ -28,6 +29,7 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <NotificationProvider>
       <TooltipProvider>
+        <ScrollManager />
         <Toaster />
         <Sonner position="top-right" />
         <BrowserRouter>
