@@ -13,15 +13,19 @@ export default function Login() {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const { login, isAuthenticated, loading } = useAuth();
+  const { login, isAuthenticated, isExecutive, loading } = useAuth();
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
     if (isAuthenticated) {
-      navigate('/dashboard');
+      if (isExecutive) {
+        navigate('/orders');
+      } else {
+        navigate('/dashboard');
+      }
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, isExecutive, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,7 +46,7 @@ export default function Login() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted/50 p-4">
+    <div className="min-h-[100dvh] flex items-center justify-center bg-muted/50 p-4">
       <div className="w-full max-w-md space-y-6">
         <div className="flex flex-col items-center text-center space-y-2">
           <div className="rounded-full bg-primary p-2 w-12 h-12 flex items-center justify-center">
@@ -104,4 +108,19 @@ export default function Login() {
       </div>
     </div>
   );
+}
+
+// Create a component to reset body scroll
+export function BodyScrollReset() {
+  useEffect(() => {
+    // Force reset body overflow on component mount
+    document.body.style.overflow = '';
+    
+    return () => {
+      // Clean up just in case
+      document.body.style.overflow = '';
+    };
+  }, []);
+  
+  return null;
 }

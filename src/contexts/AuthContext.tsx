@@ -38,7 +38,13 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem('user', JSON.stringify(userData));
       localStorage.setItem('token', response.token);
       sonnerToast.success(`Welcome back, ${userData.name}!`);
-      navigate('/dashboard');
+      
+      // Redirect based on role
+      if (userData.role === 'executive') {
+        navigate('/orders');
+      } else {
+        navigate('/dashboard');
+      }
     } catch (error) {
       console.error('Login error:', error);
       sonnerToast.error(error instanceof Error ? error.message : 'Invalid phone or password');

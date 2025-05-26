@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/AuthContext";
 import PrivateRoute from "@/components/route/PrivateRoute";
 import AdminRoute from "@/components/route/AdminRoute";
 import Dashboard from "@/pages/Dashboard";
@@ -17,6 +18,12 @@ import { NotificationProvider } from '@/contexts/NotificationContext';
 
 const queryClient = new QueryClient();
 
+// Home component that redirects based on user role
+const Home = () => {
+  const { isExecutive } = useAuth();
+  return <Navigate to={isExecutive ? "/orders" : "/dashboard"} replace />;
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <NotificationProvider>
@@ -26,7 +33,11 @@ const App = () => (
         <BrowserRouter>
           <AuthProvider>
             <Routes>
-              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+              <Route path="/" element={
+                <PrivateRoute>
+                  <Home />
+                </PrivateRoute>
+              } />
               <Route path="/login" element={<Login />} />
               
               <Route path="/dashboard" element={
