@@ -242,7 +242,7 @@ const DashboardLayout = React.memo(({ children }: { children: React.ReactNode })
 
   const SidebarContent = useMemo(() => {
     return (
-      <aside className="flex flex-col bg-card border-r will-change-transform h-[100dvh]">
+      <aside className="flex flex-col bg-card border-r shadow-md will-change-transform h-[100dvh] overflow-y-auto overflow-x-hidden custom-scrollbar" aria-label="Main navigation">
         <div className="p-4">
           <div className="flex items-center justify-between">
             {!sidebarCollapsed ? (
@@ -264,6 +264,7 @@ const DashboardLayout = React.memo(({ children }: { children: React.ReactNode })
                 size="icon" 
                 onClick={toggleSidebarCollapse} 
                 className="hidden md:flex"
+                aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
               >
                 {sidebarCollapsed ? (
                   <ChevronRight className="h-4 w-4" />
@@ -275,9 +276,9 @@ const DashboardLayout = React.memo(({ children }: { children: React.ReactNode })
           </div>
         </div>
         <Separator />
-        <nav className="flex-1 overflow-y-auto p-3 space-y-1 overscroll-contain">
-          {navigationItems.map((item) => (
-            item.show && (
+        <nav className="flex-1 overflow-y-auto p-3 space-y-1 overscroll-contain custom-scrollbar">
+          {navigationItems.map((item) => 
+            item.show ? (
               <NavItem
                 key={item.href}
                 icon={item.icon}
@@ -287,8 +288,8 @@ const DashboardLayout = React.memo(({ children }: { children: React.ReactNode })
                 onClick={closeSidebar}
                 collapsed={sidebarCollapsed}
               />
-            )
-          ))}
+            ) : null
+          )}
         </nav>
         <Separator />
         <UserInfo collapsed={sidebarCollapsed} />
@@ -343,26 +344,33 @@ const DashboardLayout = React.memo(({ children }: { children: React.ReactNode })
         {/* Sidebar */}
         {isMobile ? (
           <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
-            <SheetContent side="left" className="p-0 w-[80vw] max-w-[300px]">
+            <SheetContent side="left" className="p-0 w-[80vw] max-w-[300px]" aria-label="Mobile navigation menu">
               {SidebarContent}
             </SheetContent>
           </Sheet>
         ) : (
-          <div 
-            className={cn(
-              "shrink-0 will-change-transform",
+          <>
+            <div 
+              className={cn(
+                "shrink-0 will-change-transform fixed top-0 bottom-0 left-0 z-30",
+                sidebarCollapsed ? "w-16" : "w-64"
+              )}
+              style={{
+                transition: "width 200ms cubic-bezier(0.4, 0, 0.2, 1)"
+              }}
+            >
+              {SidebarContent}
+            </div>
+            {/* Add a spacer div to prevent content from being hidden behind the fixed sidebar */}
+            <div className={cn(
+              "shrink-0",
               sidebarCollapsed ? "w-16" : "w-64"
-            )}
-            style={{
-              transition: "width 200ms cubic-bezier(0.4, 0, 0.2, 1)"
-            }}
-          >
-            {SidebarContent}
-          </div>
+            )}></div>
+          </>
         )}
 
         {/* Main Content */}
-        <main className="flex-1 relative">
+        <main className="flex-1 relative overflow-x-hidden" role="main" aria-label="Main content">
           <div className="container mx-auto p-4 md:p-6 min-h-[100dvh]">
             {children}
           </div>
