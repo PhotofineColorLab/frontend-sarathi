@@ -45,7 +45,6 @@ import { cn } from '@/lib/utils';
 import { OrderStatus, PaymentCondition, Product, ProductDimension, OrderItem, User, Order, OrderPriority } from '@/lib/types';
 import { createOrder, fetchStaff, fetchProducts, updateProduct, updateOrder, updateOrderWithImage, createProduct } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
-import { useNotifications } from '@/contexts/NotificationContext';
 import {
   Dialog,
   DialogContent,
@@ -79,7 +78,6 @@ interface OrderFormProps {
 export default function OrderForm({ onSuccess, initialOrder, onCancel }: OrderFormProps) {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { addNotification } = useNotifications();
   const [isLoading, setIsLoading] = useState(false);
   const [orderImage, setOrderImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(initialOrder?.orderImage || null);
@@ -198,15 +196,86 @@ export default function OrderForm({ onSuccess, initialOrder, onCancel }: OrderFo
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      setOrderImage(file);
       
-      // Create a preview
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+      // Compress the image before setting it
+      compressImage(file).then(compressedFile => {
+        setOrderImage(compressedFile);
+        
+        // Create a preview
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setImagePreview(reader.result as string);
+        };
+        reader.readAsDataURL(compressedFile);
+      }).catch(error => {
+        console.error('Image compression failed:', error);
+        // Fallback to original file if compression fails
+        setOrderImage(file);
+        
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setImagePreview(reader.result as string);
+        };
+        reader.readAsDataURL(file);
+      });
     }
+  };
+  
+  // Function to compress images
+  const compressImage = async (file: File): Promise<File> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target?.result as string;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          // Calculate new dimensions while maintaining aspect ratio
+          let width = img.width;
+          let height = img.height;
+          const maxDimension = 1200; // Max dimension for the compressed image
+          
+          if (width > height && width > maxDimension) {
+            height = Math.round((height * maxDimension) / width);
+            width = maxDimension;
+          } else if (height > maxDimension) {
+            width = Math.round((width * maxDimension) / height);
+            height = maxDimension;
+          }
+          
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx?.drawImage(img, 0, 0, width, height);
+          
+          // Convert to Blob with quality compression
+          canvas.toBlob(
+            (blob) => {
+              if (!blob) {
+                reject(new Error('Canvas to Blob conversion failed'));
+                return;
+              }
+              // Create a new file from the blob
+              const compressedFile = new File([blob], file.name, {
+                type: 'image/jpeg',
+                lastModified: Date.now(),
+              });
+              console.log(`Image compressed: ${file.size} -> ${compressedFile.size} bytes (${Math.round((compressedFile.size / file.size) * 100)}% of original)`);
+              resolve(compressedFile);
+            },
+            'image/jpeg',
+            0.7 // Quality parameter: 0.7 = 70% quality, good balance between quality and size
+          );
+        };
+        img.onerror = () => {
+          reject(new Error('Error loading image'));
+        };
+      };
+      reader.onerror = () => {
+        reject(new Error('Error reading file'));
+      };
+    });
   };
 
   // Add item to order
@@ -328,13 +397,7 @@ export default function OrderForm({ onSuccess, initialOrder, onCancel }: OrderFo
         
         toast.success('Order updated successfully');
         
-        // Add notification for order update
-        addNotification({
-          type: 'order',
-          title: 'Order Updated',
-          message: `Order #${createdOrUpdatedOrder.orderNumber || (createdOrUpdatedOrder._id ? createdOrUpdatedOrder._id.substring(0, 8) : '')} has been updated`,
-          actionUrl: '/orders'
-        });
+        // Notification system removed as per requirements
       } else {
         // Create new order
         // Create form data
@@ -353,13 +416,7 @@ export default function OrderForm({ onSuccess, initialOrder, onCancel }: OrderFo
         createdOrUpdatedOrder = await createOrder(formData);
         console.log('Order created successfully:', createdOrUpdatedOrder);
         
-        // Add notification for order creation
-        addNotification({
-          type: 'order',
-          title: 'New Order Created',
-          message: `Order #${createdOrUpdatedOrder.orderNumber || (createdOrUpdatedOrder._id ? createdOrUpdatedOrder._id.substring(0, 8) : '')} has been created successfully`,
-          actionUrl: '/orders'
-        });
+        // Notification system removed as per requirements
         
         toast.success('Order created successfully');
       }

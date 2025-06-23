@@ -26,7 +26,7 @@ import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { useIsMobile, useIsTablet, useIsSmallMobile } from '@/hooks/use-mobile';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { NotificationBell } from '@/components/ui/notification-bell';
+// NotificationBell removed as per requirements
 
 interface NavItemProps {
   icon: React.ReactNode;
@@ -317,7 +317,6 @@ const DashboardLayout = React.memo(({ children }: { children: React.ReactNode })
           </Button>
           
           <div className="flex items-center gap-2">
-            <NotificationBell />
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>

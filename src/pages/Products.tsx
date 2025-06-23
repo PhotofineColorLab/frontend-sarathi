@@ -42,7 +42,6 @@ import { useIsMobile, useIsSmallMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { EmptyState } from '@/components/ui/empty-state';
 import { useNavigate } from 'react-router-dom';
-import { useNotifications } from '@/contexts/NotificationContext';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/contexts/AuthContext';
 import { DeleteProductDialog } from '@/components/products/DeleteProductDialog';
@@ -193,7 +192,6 @@ export default function Products() {
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const navigate = useNavigate();
-  const { addNotification } = useNotifications();
 
   // Fetch products when component mounts
   useEffect(() => {
@@ -344,13 +342,7 @@ export default function Products() {
       // Show success notification
       toast.success(`${productToDelete.name || 'Product'} deleted successfully`);
       
-      // Add to notifications
-      addNotification({
-        type: 'product',
-        title: 'Product Deleted',
-        message: `${productToDelete.name || 'Product'} has been successfully removed from your inventory`,
-        actionUrl: '/products'
-      });
+      // Notification system removed as per requirements
       
       // Clear the product to delete and close dialog only on success
       setProductToDelete(null);
@@ -360,7 +352,7 @@ export default function Products() {
       toast.error(error.message || 'Failed to delete product');
       // Do not close dialog or clear product on error
     }
-  }, [products, addNotification]);
+  }, [products]);
 
   const handleSubmitProduct = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
@@ -401,13 +393,7 @@ export default function Products() {
         
         toast.success(`${productName} updated successfully`);
         
-        // Add notification
-        addNotification({
-          type: 'product',
-          title: 'Product Updated',
-          message: `${productName} has been successfully updated in your inventory`,
-          actionUrl: '/products'
-        });
+        // Notification system removed
       } else {
         // Create new product
         savedProduct = await createProduct(formData);
@@ -420,13 +406,7 @@ export default function Products() {
         setProducts(prev => [savedProduct, ...prev]);
         toast.success(`${productName} added successfully`);
         
-        // Add notification
-        addNotification({
-          type: 'product',
-          title: 'Product Added',
-          message: `${productName} has been successfully added to your inventory`,
-          actionUrl: '/products'
-        });
+        // Notification system removed
       }
 
       // Reset form and close dialog
@@ -438,7 +418,7 @@ export default function Products() {
     } finally {
       setIsSubmitting(false);
     }
-  }, [productName, productStock, productDimension, productThreshold, isEditing, selectedProduct, getProductId, resetForm, addNotification]);
+  }, [productName, productStock, productDimension, productThreshold, isEditing, selectedProduct, getProductId, resetForm]);
 
   // Filter products based on search term
   const filteredProducts = useMemo(() => {
@@ -739,10 +719,10 @@ export default function Products() {
       {/* Delete Confirmation Dialog */}
       {productToDelete && (
         <DeleteProductDialog
-          open={isDeleteDialogOpen}
+          isOpen={isDeleteDialogOpen}
           onOpenChange={setIsDeleteDialogOpen}
-          productName={productToDelete.name}
-          onConfirm={() => handleDeleteProduct(getProductId(productToDelete))}
+          product={productToDelete}
+          onDelete={handleDeleteProduct}
         />
       )}
     </DashboardLayout>

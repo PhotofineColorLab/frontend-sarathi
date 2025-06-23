@@ -14,7 +14,7 @@ import Staff from "@/pages/Staff";
 import Analytics from "@/pages/Analytics";
 import Login from "@/pages/Login";
 import NotFound from "@/pages/NotFound";
-import { NotificationProvider } from '@/contexts/NotificationContext';
+// Notification system removed as per requirements
 import { ScrollManager } from '@/components/layout/ScrollManager';
 
 const queryClient = new QueryClient();
@@ -27,14 +27,13 @@ const Home = () => {
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <NotificationProvider>
-      <TooltipProvider>
-        <ScrollManager />
-        <Toaster />
-        <Sonner position="top-right" />
-        <BrowserRouter>
-          <AuthProvider>
-            <Routes>
+    <TooltipProvider>
+      <ScrollManager />
+      <Toaster />
+      <Sonner position="top-right" />
+      <BrowserRouter>
+        <AuthProvider>
+          <Routes>
               <Route path="/" element={
                 <PrivateRoute>
                   <Home />
@@ -73,11 +72,10 @@ const App = () => (
               } />
               
               <Route path="*" element={<NotFound />} />
-            </Routes>
-          </AuthProvider>
-        </BrowserRouter>
-      </TooltipProvider>
-    </NotificationProvider>
+          </Routes>
+        </AuthProvider>
+      </BrowserRouter>
+    </TooltipProvider>
   </QueryClientProvider>
 );
 

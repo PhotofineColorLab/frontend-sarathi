@@ -32,7 +32,6 @@ import { OrderStatusBadge } from '@/components/orders/OrderStatusBadge';
 import { PaymentStatusBadge } from '@/components/orders/PaymentStatusBadge';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft } from 'lucide-react';
-import { useNotifications } from '@/contexts/NotificationContext';
 import { Badge } from '@/components/ui/badge';
 import { generateOrderPDF } from '@/lib/utils';
 import { Printer } from 'lucide-react';
@@ -100,7 +99,6 @@ export default function Orders() {
   const [renderAnimations, setRenderAnimations] = useState(false);
   const isMobile = useIsMobile();
   const isSmallMobile = useIsSmallMobile();
-  const { addNotification } = useNotifications();
   const abortControllerRef = useRef<AbortController | null>(null);
 
   // Effect for initial load
@@ -267,19 +265,14 @@ export default function Orders() {
       
       toast.success('Order marked as paid');
       
-      addNotification({
-        type: 'order',
-        title: 'Order Marked as Paid',
-        message: `Order #${updatedOrder.orderNumber || orderId.substring(0, 8)} has been marked as paid`,
-        actionUrl: '/orders'
-      });
+      // Notification system removed
     } catch (error) {
       console.error(error);
       toast.error('Failed to mark order as paid');
     } finally {
       setIsUpdateLoading(false);
     }
-  }, [orders, addNotification]);
+  }, [orders]);
 
   const handleDeleteOrder = useCallback(async (orderId: string) => {
     try {
@@ -292,17 +285,12 @@ export default function Orders() {
       setIsDeleteDialogOpen(false);
       toast.success('Order deleted successfully');
       
-      addNotification({
-        type: 'order',
-        title: 'Order Deleted',
-        message: `Order #${orderNumber} has been successfully deleted`,
-        actionUrl: '/orders'
-      });
+      // Notification system removed
     } catch (error) {
       console.error(error);
       toast.error('Failed to delete order');
     }
-  }, [orders, addNotification]);
+  }, [orders]);
 
   const handleUpdateOrder = useCallback((order: Order) => {
     setSelectedOrder(order);
@@ -329,12 +317,7 @@ export default function Orders() {
       
       toast.success('Delivery person assigned successfully');
       
-      addNotification({
-        type: 'order',
-        title: 'Delivery Person Assigned',
-        message: `Delivery person assigned for Order #${updatedOrder.orderNumber || orderId.substring(0, 8)}`,
-        actionUrl: '/orders'
-      });
+      // Notification system removed
       
       return Promise.resolve();
     } catch (error) {
@@ -342,7 +325,7 @@ export default function Orders() {
       toast.error('Failed to assign delivery person');
       return Promise.reject(error);
     }
-  }, [orders, addNotification]);
+  }, [orders]);
 
   // Memoize filtered orders to prevent recalculation on each render
   const filteredOrders = useMemo(() => {

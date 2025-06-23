@@ -10,8 +10,6 @@ import { fetchOrders, fetchProducts } from '@/lib/api';
 import { toast } from 'sonner';
 import { useIsMobile, useIsSmallMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
-import { NotificationBell } from '@/components/ui/notification-bell';
-import { useNotifications } from '@/contexts/NotificationContext';
 
 // Memoized summary card component to reduce re-renders
 const SummaryCard = memo(({ 
@@ -150,8 +148,6 @@ export default function Dashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [renderAnimations, setRenderAnimations] = useState(false);
   const navigate = useNavigate();
-  const { addNotification } = useNotifications();
-  
   const isMobile = useIsMobile();
   const isSmallMobile = useIsSmallMobile();
   
@@ -176,14 +172,7 @@ export default function Dashboard() {
         const lowStockItems = productsData.filter(p => 
           typeof p.threshold === 'number' && p.stock < p.threshold
         );
-        if (lowStockItems.length > 0) {
-          addNotification({
-            type: 'product',
-            title: 'Low Stock Alert',
-            message: `${lowStockItems.length} products have low stock and need attention`,
-            actionUrl: '/products'
-          });
-        }
+        // Notification system removed
         
         // Delay animations until content is loaded
         setTimeout(() => {
@@ -209,7 +198,7 @@ export default function Dashboard() {
       isMounted = false;
       controller.abort();
     };
-  }, [addNotification]);
+  }, []);
   
   // Memoize calculations to avoid recalculations on re-render
   const analytics = useMemo(() => {
@@ -294,7 +283,6 @@ export default function Dashboard() {
               Welcome back, {user?.name}! Here's a summary of your shop.
             </p>
           </div>
-          {!isMobile && <NotificationBell />}
         </div>
 
         {isAdmin && (
